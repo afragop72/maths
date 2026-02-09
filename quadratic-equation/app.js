@@ -21,9 +21,14 @@ const sliders = {
 const resetButton = document.getElementById("reset");
 const exportPngButton = document.getElementById("export-png");
 const exportSvgButton = document.getElementById("export-svg");
+const copyEquationButton = document.getElementById("copy-equation");
 const vertexLabel = document.getElementById("vertex");
 const discriminantLabel = document.getElementById("discriminant");
 const rootsLabel = document.getElementById("roots");
+const badgeA = document.getElementById("badge-a");
+const badgeB = document.getElementById("badge-b");
+const badgeC = document.getElementById("badge-c");
+const discriminantCard = document.getElementById("discriminant-card");
 
 // Validate required DOM elements
 if (!canvas || !ctx) {
@@ -37,6 +42,13 @@ const defaultState = {
   c: 0,
   xMin: -10,
   xMax: 10,
+};
+
+const presets = {
+  simple: { a: 1, b: 0, c: 0 },
+  inverted: { a: -1, b: 0, c: 0 },
+  shifted: { a: 1, b: 0, c: -4 },
+  "no-roots": { a: 1, b: 0, c: 5 }
 };
 
 const padding = 50;
@@ -108,7 +120,17 @@ function parseFraction(raw) {
 
 function parseValue(input, fallback) {
   const value = parseFraction(String(input.value));
-  return Number.isFinite(value) ? value : fallback;
+  const isValid = Number.isFinite(value);
+
+  if (input.type === "text" || input.type === "number") {
+    if (isValid) {
+      input.classList.remove("invalid");
+    } else if (input.value.trim() !== "") {
+      input.classList.add("invalid");
+    }
+  }
+
+  return isValid ? value : fallback;
 }
 
 function clampRange(min, max) {
@@ -501,6 +523,19 @@ function drawCrosshair() {
   ctx.fillText(label, tooltipX + tooltipPadding, tooltipY + tooltipHeight / 2);
 }
 
+function updateBadge(badge, value) {
+  if (Math.abs(value) < 1e-6) {
+    badge.textContent = "0";
+    badge.className = "coef-badge zero";
+  } else if (value > 0) {
+    badge.textContent = "+";
+    badge.className = "coef-badge positive";
+  } else {
+    badge.textContent = "−";
+    badge.className = "coef-badge negative";
+  }
+}
+
 function updateStats(a, b, c) {
   const vertex = getVertex(a, b, c);
   if (Number.isFinite(vertex.x)) {
@@ -513,11 +548,21 @@ function updateStats(a, b, c) {
   discriminantLabel.textContent = disc.toFixed(2);
 
   const roots = getRoots(a, b, c);
+  discriminantCard.className = "stat-card";
   if (roots.length === 0) {
     rootsLabel.textContent = "No real roots";
+    discriminantCard.classList.add("no-roots");
+  } else if (roots.length === 1) {
+    rootsLabel.textContent = roots.map((root) => root.toFixed(2)).join(", ");
+    discriminantCard.classList.add("one-root");
   } else {
     rootsLabel.textContent = roots.map((root) => root.toFixed(2)).join(", ");
+    discriminantCard.classList.add("two-roots");
   }
+
+  updateBadge(badgeA, a);
+  updateBadge(badgeB, b);
+  updateBadge(badgeC, c);
 }
 
 function getDisplayText(value, fallback) {
@@ -845,6 +890,30 @@ function exportPng() {
   downloadFile(dataUrl, "quadratic-graph.png");
 }
 
+function copyEquation() {
+  const a = parseValue(inputs.a, defaultState.a);
+  const b = parseValue(inputs.b, defaultState.b);
+  const c = parseValue(inputs.c, defaultState.c);
+
+  const aStr = a === 1 ? "" : a === -1 ? "-" : a.toString();
+  const bStr = b === 0 ? "" : b > 0 ? ` + ${b}x` : ` - ${Math.abs(b)}x`;
+  const cStr = c === 0 ? "" : c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`;
+
+  let equation = `y = ${aStr}x²${bStr}${cStr}`;
+  equation = equation.replace(/\s+/g, " ").trim();
+
+  navigator.clipboard.writeText(equation).then(() => {
+    copyEquationButton.textContent = "✓";
+    copyEquationButton.classList.add("copied");
+    setTimeout(() => {
+      copyEquationButton.textContent = "📋";
+      copyEquationButton.classList.remove("copied");
+    }, 2000);
+  }).catch((err) => {
+    console.error("Failed to copy equation:", err);
+  });
+}
+
 function exportSvg() {
   const width = canvas.width;
   const height = canvas.height;
@@ -960,6 +1029,7 @@ autoZoomToggle.addEventListener("change", render);
 resetButton.addEventListener("click", resetForm);
 exportPngButton.addEventListener("click", exportPng);
 exportSvgButton.addEventListener("click", exportSvg);
+copyEquationButton.addEventListener("click", copyEquation);
 
 canvas.addEventListener("mousemove", (event) => {
   const rect = canvas.getBoundingClientRect();
@@ -984,6 +1054,22 @@ canvas.addEventListener("mousemove", (event) => {
 canvas.addEventListener("mouseleave", () => {
   hoverState.isHovering = false;
   render();
+});
+
+document.querySelectorAll(".preset-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    const presetName = button.dataset.preset;
+    const preset = presets[presetName];
+    if (preset) {
+      inputs.a.value = preset.a;
+      inputs.b.value = preset.b;
+      inputs.c.value = preset.c;
+      sliders.a.value = preset.a;
+      sliders.b.value = preset.b;
+      sliders.c.value = preset.c;
+      render();
+    }
+  });
 });
 
 render();

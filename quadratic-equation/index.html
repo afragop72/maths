@@ -21,26 +21,31 @@
 
       <main class="workspace">
         <section class="panel">
-          <h2>Equation</h2>
+          <div class="equation-header">
+            <h2>Equation</h2>
+            <button type="button" id="copy-equation" class="icon-btn" title="Copy equation">
+              📋
+            </button>
+          </div>
           <p class="equation" id="equation-display">y = 1x² + 0x + 0</p>
 
           <form id="controls" class="controls" autocomplete="off">
             <label>
-              <span>a</span>
+              <span>a <span class="coef-badge" id="badge-a">+</span></span>
               <div class="field">
                 <input type="range" min="-5" max="5" step="0.1" id="slider-a" value="1" />
                 <input type="text" inputmode="decimal" id="coef-a" value="1" />
               </div>
             </label>
             <label>
-              <span>b</span>
+              <span>b <span class="coef-badge" id="badge-b">0</span></span>
               <div class="field">
                 <input type="range" min="-10" max="10" step="0.1" id="slider-b" value="0" />
                 <input type="text" inputmode="decimal" id="coef-b" value="0" />
               </div>
             </label>
             <label>
-              <span>c</span>
+              <span>c <span class="coef-badge" id="badge-c">0</span></span>
               <div class="field">
                 <input type="range" min="-10" max="10" step="0.1" id="slider-c" value="0" />
                 <input type="text" inputmode="decimal" id="coef-c" value="0" />
@@ -61,17 +66,27 @@
             <button type="button" id="reset">Reset</button>
           </form>
 
+          <div class="presets">
+            <h3>Quick Presets</h3>
+            <div class="preset-buttons">
+              <button type="button" class="preset-btn" data-preset="simple">Simple</button>
+              <button type="button" class="preset-btn" data-preset="inverted">Inverted</button>
+              <button type="button" class="preset-btn" data-preset="shifted">Shifted</button>
+              <button type="button" class="preset-btn" data-preset="no-roots">No Roots</button>
+            </div>
+          </div>
+
           <div class="stats">
-            <div>
-              <h3>Vertex</h3>
+            <div class="stat-card">
+              <h3><span class="stat-icon">📍</span> Vertex</h3>
               <p id="vertex">(0, 0)</p>
             </div>
-            <div>
-              <h3>Discriminant</h3>
+            <div class="stat-card" id="discriminant-card">
+              <h3><span class="stat-icon">🧮</span> Discriminant</h3>
               <p id="discriminant">0</p>
             </div>
-            <div>
-              <h3>Roots</h3>
+            <div class="stat-card">
+              <h3><span class="stat-icon">🎯</span> Roots</h3>
               <p id="roots">—</p>
             </div>
           </div>
