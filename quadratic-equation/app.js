@@ -1027,15 +1027,32 @@ function updateEquation() {
   const bRaw = getDisplayText(inputs.b.value, "0");
   const cRaw = getDisplayText(inputs.c.value, "0");
 
+  // Parse and convert to fractions for display
   const aParsed = parseFraction(aRaw);
   const aValue = Number.isFinite(aParsed) ? aParsed : 0;
+  const aFractionStr = decimalToFraction(aValue);
   const aSign = aValue < 0 ? "-" : "";
-  const aAbs = formatAbsCoeffHtml(aRaw);
-  const aCoef = aAbs === "1" ? "" : aAbs;
+
+  // Format coefficient with fraction HTML
+  const aAbsStr = aFractionStr.replace(/^[-+]/, "");
+  let aAbs = aAbsStr;
+  if (aAbsStr.includes("/")) {
+    aAbs = buildFractionHtml(aAbsStr);
+  }
+  const aCoef = aAbsStr === "1" ? "" : aAbs;
   const aTerm = `${aSign}${aCoef}x<sup>2</sup>`;
 
-  const bTerm = formatTermHtml(bRaw, "x");
-  const cTerm = formatTermHtml(cRaw, "");
+  // Parse b and c, convert to fractions
+  const bParsed = parseFraction(bRaw);
+  const bValue = Number.isFinite(bParsed) ? bParsed : 0;
+  const bFractionStr = decimalToFraction(bValue);
+
+  const cParsed = parseFraction(cRaw);
+  const cValue = Number.isFinite(cParsed) ? cParsed : 0;
+  const cFractionStr = decimalToFraction(cValue);
+
+  const bTerm = formatTermHtml(bFractionStr, "x");
+  const cTerm = formatTermHtml(cFractionStr, "");
 
   const equationHtml = `y = ${aTerm}${bTerm ? ` ${bTerm}` : ""}${cTerm ? ` ${cTerm}` : ""}`
     .replace(/\s\+/g, " +")
@@ -1062,10 +1079,18 @@ function updateVertexForm(a, b, c) {
   const h = vertex.x;
   const k = vertex.y;
 
-  // Format a coefficient
+  // Format a coefficient - use fractions
   let aStr = "";
   if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
-    aStr = decimalToFraction(a);
+    const aFraction = decimalToFraction(a);
+    // Check if it's negative and has a fraction
+    if (a < 0 && aFraction.startsWith("-") && aFraction.substring(1).includes("/")) {
+      aStr = "-" + buildFractionHtml(aFraction.substring(1));
+    } else if (aFraction.includes("/")) {
+      aStr = buildFractionHtml(aFraction);
+    } else {
+      aStr = aFraction;
+    }
   } else if (Math.abs(a + 1) < 1e-6) {
     aStr = "-";
   }
@@ -1107,10 +1132,18 @@ function updateFactoredForm(a, b, c) {
     return;
   }
 
-  // Format a coefficient
+  // Format a coefficient - use fractions
   let aStr = "";
   if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
-    aStr = decimalToFraction(a);
+    const aFraction = decimalToFraction(a);
+    // Check if it's negative and has a fraction
+    if (a < 0 && aFraction.startsWith("-") && aFraction.substring(1).includes("/")) {
+      aStr = "-" + buildFractionHtml(aFraction.substring(1));
+    } else if (aFraction.includes("/")) {
+      aStr = buildFractionHtml(aFraction);
+    } else {
+      aStr = aFraction;
+    }
   } else if (Math.abs(a + 1) < 1e-6) {
     aStr = "-";
   }
