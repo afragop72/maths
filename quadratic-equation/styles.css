@@ -64,9 +64,76 @@ h1 {
 
 .workspace {
   display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  grid-template-columns: 280px repeat(2, minmax(320px, 1fr));
   gap: 28px;
   align-items: start;
+}
+
+.info-panel {
+  background: linear-gradient(135deg, #fff5eb 0%, #fef3f2 100%);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 2px solid rgba(255, 107, 61, 0.15);
+  position: sticky;
+  top: 24px;
+}
+
+.info-panel h2 {
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  color: var(--accent-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-panel h2::before {
+  content: "📚";
+  font-size: 1.3rem;
+}
+
+.form-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-info-item {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 107, 61, 0.1);
+}
+
+.form-info-item h3 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.form-info-item .formula {
+  font-family: var(--mono);
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.form-info-item .description {
+  font-size: 0.8rem;
+  margin: 0 0 4px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.form-info-item .note {
+  font-size: 0.75rem;
+  margin: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-style: italic;
 }
 
 .panel,
@@ -487,9 +554,34 @@ canvas {
   text-align: left;
 }
 
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .info-panel {
+    grid-column: 1 / -1;
+    position: relative;
+    top: 0;
+  }
+
+  .form-info {
+    flex-direction: row;
+  }
+}
+
 @media (max-width: 960px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .info-panel {
+    position: relative;
+    top: 0;
+  }
+
+  .form-info {
+    flex-direction: column;
   }
 }
 
