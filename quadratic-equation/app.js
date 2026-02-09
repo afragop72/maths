@@ -684,64 +684,30 @@ function sampleYRange(a, b, c, xMin, xMax) {
   return { min, max };
 }
 
-// Auto-zoom bounds while keeping equal x/y scale and visible x-axis.
+// Auto-zoom bounds to show the complete parabola.
 function getAutoBounds(a, b, c, baseXMin, baseXMax) {
-  const plotWidth = canvas.width - padding * 2;
-  const plotHeight = canvas.height - padding * 2;
-  const aspect = plotHeight / plotWidth;
+  const xMin = baseXMin;
+  const xMax = baseXMax;
 
-  const center = (baseXMin + baseXMax) / 2;
-  const maxRange = baseXMax - baseXMin;
-  const minRange = Math.min(4, maxRange);
+  const sample = sampleYRange(a, b, c, xMin, xMax);
+  const yDataRange = sample.max - sample.min;
+  const paddingY = Math.max(1, yDataRange * 0.15);
 
-  let xRange = maxRange;
+  let yMin = sample.min - paddingY;
+  let yMax = sample.max + paddingY;
 
-  for (let pass = 0; pass < 2; pass += 1) {
-    const xMin = center - xRange / 2;
-    const xMax = center + xRange / 2;
-    const sample = sampleYRange(a, b, c, xMin, xMax);
-    const paddingY = Math.max(0.5, (sample.max - sample.min) * 0.12);
-    let yMin = sample.min - paddingY;
-    let yMax = sample.max + paddingY;
-
-    const yRange = Math.max(1e-6, yMax - yMin);
-    xRange = Math.min(Math.max(yRange / aspect, minRange), maxRange);
-
-    const axisMargin = yRange * 0.18;
-    if (0 < yMin - axisMargin) {
-      yMin = 0 - axisMargin;
-      yMax = yMin + yRange;
-    } else if (0 > yMax + axisMargin) {
-      yMax = 0 + axisMargin;
-      yMin = yMax - yRange;
-    }
+  const axisMargin = (yMax - yMin) * 0.15;
+  if (yMin > 0 && yMin < axisMargin * 2) {
+    yMin = -axisMargin;
+  } else if (yMax < 0 && yMax > -axisMargin * 2) {
+    yMax = axisMargin;
   }
-
-  const finalXMin = center - xRange / 2;
-  const finalXMax = center + xRange / 2;
-  const finalSample = sampleYRange(a, b, c, finalXMin, finalXMax);
-  const finalPadding = Math.max(0.5, (finalSample.max - finalSample.min) * 0.12);
-  let finalYMin = finalSample.min - finalPadding;
-  let finalYMax = finalSample.max + finalPadding;
-
-  const finalRange = Math.max(1e-6, finalYMax - finalYMin);
-  const axisMargin = finalRange * 0.18;
-  if (0 < finalYMin - axisMargin) {
-    finalYMin = 0 - axisMargin;
-    finalYMax = finalYMin + finalRange;
-  } else if (0 > finalYMax + axisMargin) {
-    finalYMax = 0 + axisMargin;
-    finalYMin = finalYMax - finalRange;
-  }
-
-  const yMid = (finalYMin + finalYMax) / 2;
-  const yRange = xRange * aspect;
 
   return {
-    xMin: finalXMin,
-    xMax: finalXMax,
-    yMin: yMid - yRange / 2,
-    yMax: yMid + yRange / 2,
+    xMin: xMin,
+    xMax: xMax,
+    yMin: yMin,
+    yMax: yMax,
   };
 }
 
