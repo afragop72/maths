@@ -166,6 +166,67 @@ function normalizeFractionString(raw) {
 }
 
 /**
+ * Greatest common divisor using Euclidean algorithm
+ * @param {number} a - First number
+ * @param {number} b - Second number
+ * @returns {number} - GCD of a and b
+ */
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b !== 0) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+  return a;
+}
+
+/**
+ * Converts a decimal to a fraction string
+ * @param {number} decimal - Decimal number to convert
+ * @param {number} tolerance - Tolerance for fraction detection (default 0.001)
+ * @returns {string} - Fraction string or decimal string if no simple fraction found
+ *
+ * Attempts to find a simple fraction representation for common values
+ */
+function decimalToFraction(decimal, tolerance = 0.001) {
+  // Handle special cases
+  if (Math.abs(decimal) < 1e-6) {
+    return "0";
+  }
+
+  // If it's close to an integer, return the integer
+  const rounded = Math.round(decimal);
+  if (Math.abs(decimal - rounded) < tolerance) {
+    return rounded.toString();
+  }
+
+  // Try to find a simple fraction (denominator up to 20)
+  const sign = decimal < 0 ? "-" : "";
+  const absDecimal = Math.abs(decimal);
+
+  for (let denominator = 2; denominator <= 20; denominator++) {
+    const numerator = Math.round(absDecimal * denominator);
+    const fractionValue = numerator / denominator;
+
+    if (Math.abs(fractionValue - absDecimal) < tolerance) {
+      const divisor = gcd(numerator, denominator);
+      const simplifiedNum = numerator / divisor;
+      const simplifiedDen = denominator / divisor;
+
+      if (simplifiedDen === 1) {
+        return sign + simplifiedNum.toString();
+      }
+      return sign + simplifiedNum + "/" + simplifiedDen;
+    }
+  }
+
+  // No simple fraction found, return decimal with 2 decimal places
+  return decimal.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/**
  * Parses user input that can be decimal (e.g., "1.5") or fractional (e.g., "3/4")
  * @param {string} raw - Raw input string
  * @returns {number} - Parsed numeric value, or NaN if invalid
@@ -1004,20 +1065,26 @@ function updateVertexForm(a, b, c) {
   // Format a coefficient
   let aStr = "";
   if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
-    aStr = a.toFixed(2).replace(/\.?0+$/, "");
+    aStr = decimalToFraction(a);
   } else if (Math.abs(a + 1) < 1e-6) {
     aStr = "-";
   }
 
-  // Format h (note the sign flip)
+  // Format h (note the sign flip) - use fractions
   const hSign = h >= 0 ? "-" : "+";
-  const hAbs = Math.abs(h).toFixed(2).replace(/\.?0+$/, "");
+  const hFraction = decimalToFraction(Math.abs(h));
+  const hDisplay = hFraction.includes("/")
+    ? buildFractionHtml(hFraction)
+    : hFraction;
 
-  // Format k
+  // Format k - use fractions
   const kSign = k >= 0 ? "+" : "-";
-  const kAbs = Math.abs(k).toFixed(2).replace(/\.?0+$/, "");
+  const kFraction = decimalToFraction(Math.abs(k));
+  const kDisplay = kFraction.includes("/")
+    ? buildFractionHtml(kFraction)
+    : kFraction;
 
-  const formHtml = `y = ${aStr}(x ${hSign} ${hAbs})<sup>2</sup> ${kSign} ${kAbs}`;
+  const formHtml = `y = ${aStr}(x ${hSign} ${hDisplay})<sup>2</sup> ${kSign} ${kDisplay}`;
   vertexFormDisplay.innerHTML = formHtml;
 }
 
@@ -1043,7 +1110,7 @@ function updateFactoredForm(a, b, c) {
   // Format a coefficient
   let aStr = "";
   if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
-    aStr = a.toFixed(2).replace(/\.?0+$/, "");
+    aStr = decimalToFraction(a);
   } else if (Math.abs(a + 1) < 1e-6) {
     aStr = "-";
   }
@@ -1052,18 +1119,29 @@ function updateFactoredForm(a, b, c) {
     // One root (double root)
     const r = roots[0];
     const rSign = r >= 0 ? "-" : "+";
-    const rAbs = Math.abs(r).toFixed(2).replace(/\.?0+$/, "");
-    const formHtml = `y = ${aStr}(x ${rSign} ${rAbs})<sup>2</sup>`;
+    const rFraction = decimalToFraction(Math.abs(r));
+    const rDisplay = rFraction.includes("/")
+      ? buildFractionHtml(rFraction)
+      : rFraction;
+    const formHtml = `y = ${aStr}(x ${rSign} ${rDisplay})<sup>2</sup>`;
     factoredFormDisplay.innerHTML = formHtml;
   } else {
     // Two roots
     const r1 = roots[0];
     const r2 = roots[1];
     const r1Sign = r1 >= 0 ? "-" : "+";
-    const r1Abs = Math.abs(r1).toFixed(2).replace(/\.?0+$/, "");
+    const r1Fraction = decimalToFraction(Math.abs(r1));
+    const r1Display = r1Fraction.includes("/")
+      ? buildFractionHtml(r1Fraction)
+      : r1Fraction;
+
     const r2Sign = r2 >= 0 ? "-" : "+";
-    const r2Abs = Math.abs(r2).toFixed(2).replace(/\.?0+$/, "");
-    const formHtml = `y = ${aStr}(x ${r1Sign} ${r1Abs})(x ${r2Sign} ${r2Abs})`;
+    const r2Fraction = decimalToFraction(Math.abs(r2));
+    const r2Display = r2Fraction.includes("/")
+      ? buildFractionHtml(r2Fraction)
+      : r2Fraction;
+
+    const formHtml = `y = ${aStr}(x ${r1Sign} ${r1Display})(x ${r2Sign} ${r2Display})`;
     factoredFormDisplay.innerHTML = formHtml;
   }
 }
