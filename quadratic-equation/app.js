@@ -25,6 +25,12 @@ const vertexLabel = document.getElementById("vertex");
 const discriminantLabel = document.getElementById("discriminant");
 const rootsLabel = document.getElementById("roots");
 
+// Validate required DOM elements
+if (!canvas || !ctx) {
+  console.error("Canvas element not found or context not available");
+  throw new Error("Required canvas element is missing");
+}
+
 const defaultState = {
   a: 1,
   b: 0,
@@ -40,6 +46,7 @@ const gridMajor = "rgba(15, 23, 42, 0.35)";
 const tickColor = "rgba(15, 23, 42, 0.65)";
 const curveColor = "#ff6b3d";
 const curveShadow = "rgba(255, 107, 61, 0.25)";
+const CURVE_STEPS = 180;
 
 function normalizeFractionString(raw) {
   const value = raw.trim();
@@ -56,6 +63,7 @@ function normalizeFractionString(raw) {
   return `${parts[0]}/${parts[1]}`;
 }
 
+// Parse decimal or fractional input like "3/4".
 function parseFraction(raw) {
   const value = raw.trim();
   if (value === "") {
@@ -138,10 +146,10 @@ function formatTick(value) {
   if (Math.abs(value) < 1e-6) {
     return "0";
   }
-  const rounded = value.toFixed(0);
-  return rounded;
+  return value.toFixed(0);
 }
 
+// Draw minor/major grid lines and axis labels on the axes.
 function drawGrid(bounds) {
   const xStart = Math.ceil(bounds.xMin);
   const xEnd = Math.floor(bounds.xMax);
@@ -226,7 +234,7 @@ function drawCurve(a, b, c, bounds) {
   ctx.shadowBlur = 12;
 
   ctx.beginPath();
-  const steps = 180;
+  const steps = CURVE_STEPS;
   for (let i = 0; i <= steps; i += 1) {
     const x = bounds.xMin + (i / steps) * (bounds.xMax - bounds.xMin);
     const y = evaluateQuadratic(a, b, c, x);
@@ -295,6 +303,7 @@ function formatTermHtml(raw, symbol) {
   return ` ${sign} ${coefHtml}${symbol}`.trim();
 }
 
+// Render the equation using the original fraction strings.
 function updateEquation() {
   const aRaw = getDisplayText(inputs.a.value, "0");
   const bRaw = getDisplayText(inputs.b.value, "0");
@@ -351,7 +360,7 @@ function getAutoXRange(a, b, c) {
   } else if (roots.length === 1) {
     center = roots[0];
     halfWidth = 8;
-  } else if (a !== 0) {
+  } else if (a !== 0 && Math.abs(a) >= 0.01) {
     halfWidth = 6 / Math.sqrt(Math.abs(a));
   } else if (b !== 0) {
     center = -c / b;
@@ -365,7 +374,7 @@ function getAutoXRange(a, b, c) {
 }
 
 function sampleYRange(a, b, c, xMin, xMax) {
-  const steps = 180;
+  const steps = CURVE_STEPS;
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i <= steps; i += 1) {
@@ -377,6 +386,7 @@ function sampleYRange(a, b, c, xMin, xMax) {
   return { min, max };
 }
 
+// Auto-zoom bounds while keeping equal x/y scale and visible x-axis.
 function getAutoBounds(a, b, c, baseXMin, baseXMax) {
   const plotWidth = canvas.width - padding * 2;
   const plotHeight = canvas.height - padding * 2;
@@ -458,6 +468,7 @@ function getManualBounds(a, b, c, xMin, xMax) {
   };
 }
 
+// Main render loop: compute bounds, draw grid/curve, update stats + table.
 function render() {
   const a = parseValue(inputs.a, defaultState.a);
   const b = parseValue(inputs.b, defaultState.b);
@@ -513,7 +524,9 @@ function downloadFile(dataUrl, filename) {
   const link = document.createElement("a");
   link.href = dataUrl;
   link.download = filename;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 }
 
 function exportPng() {
@@ -566,7 +579,7 @@ function exportSvg() {
   }
 
   const curvePoints = [];
-  const curveSteps = 180;
+  const curveSteps = CURVE_STEPS;
   for (let i = 0; i <= curveSteps; i += 1) {
     const x = bounds.xMin + (i / curveSteps) * (bounds.xMax - bounds.xMin);
     const y = evaluateQuadratic(a, b, c, x);
