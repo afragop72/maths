@@ -141,6 +141,35 @@ h1 {
   font-size: 0.85em;
 }
 
+.alt-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.alt-form {
+  background: rgba(15, 23, 42, 0.03);
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.alt-form h3 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.alt-form .equation {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
 .controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

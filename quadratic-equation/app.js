@@ -24,6 +24,8 @@ const ctx = canvas.getContext("2d");
 
 // UI Display elements
 const equationDisplay = document.getElementById("equation-display");
+const vertexFormDisplay = document.getElementById("vertex-form");
+const factoredFormDisplay = document.getElementById("factored-form");
 const tableBody = document.getElementById("values-table");
 const autoZoomToggle = document.getElementById("auto-zoom");
 
@@ -984,6 +986,89 @@ function updateEquation() {
 }
 
 /**
+ * Updates the vertex form display: y = a(x - h)² + k
+ * @param {number} a - Coefficient a
+ * @param {number} b - Coefficient b
+ * @param {number} c - Coefficient c
+ */
+function updateVertexForm(a, b, c) {
+  if (Math.abs(a) < 1e-6) {
+    vertexFormDisplay.innerHTML = "Not applicable (linear equation)";
+    return;
+  }
+
+  const vertex = getVertex(a, b, c);
+  const h = vertex.x;
+  const k = vertex.y;
+
+  // Format a coefficient
+  let aStr = "";
+  if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
+    aStr = a.toFixed(2).replace(/\.?0+$/, "");
+  } else if (Math.abs(a + 1) < 1e-6) {
+    aStr = "-";
+  }
+
+  // Format h (note the sign flip)
+  const hSign = h >= 0 ? "-" : "+";
+  const hAbs = Math.abs(h).toFixed(2).replace(/\.?0+$/, "");
+
+  // Format k
+  const kSign = k >= 0 ? "+" : "-";
+  const kAbs = Math.abs(k).toFixed(2).replace(/\.?0+$/, "");
+
+  const formHtml = `y = ${aStr}(x ${hSign} ${hAbs})<sup>2</sup> ${kSign} ${kAbs}`;
+  vertexFormDisplay.innerHTML = formHtml;
+}
+
+/**
+ * Updates the factored form display: y = a(x - r₁)(x - r₂)
+ * @param {number} a - Coefficient a
+ * @param {number} b - Coefficient b
+ * @param {number} c - Coefficient c
+ */
+function updateFactoredForm(a, b, c) {
+  if (Math.abs(a) < 1e-6) {
+    factoredFormDisplay.innerHTML = "Not applicable (linear equation)";
+    return;
+  }
+
+  const roots = getRoots(a, b, c);
+
+  if (roots.length === 0) {
+    factoredFormDisplay.innerHTML = "No real roots (cannot factor)";
+    return;
+  }
+
+  // Format a coefficient
+  let aStr = "";
+  if (Math.abs(a - 1) > 1e-6 && Math.abs(a + 1) > 1e-6) {
+    aStr = a.toFixed(2).replace(/\.?0+$/, "");
+  } else if (Math.abs(a + 1) < 1e-6) {
+    aStr = "-";
+  }
+
+  if (roots.length === 1) {
+    // One root (double root)
+    const r = roots[0];
+    const rSign = r >= 0 ? "-" : "+";
+    const rAbs = Math.abs(r).toFixed(2).replace(/\.?0+$/, "");
+    const formHtml = `y = ${aStr}(x ${rSign} ${rAbs})<sup>2</sup>`;
+    factoredFormDisplay.innerHTML = formHtml;
+  } else {
+    // Two roots
+    const r1 = roots[0];
+    const r2 = roots[1];
+    const r1Sign = r1 >= 0 ? "-" : "+";
+    const r1Abs = Math.abs(r1).toFixed(2).replace(/\.?0+$/, "");
+    const r2Sign = r2 >= 0 ? "-" : "+";
+    const r2Abs = Math.abs(r2).toFixed(2).replace(/\.?0+$/, "");
+    const formHtml = `y = ${aStr}(x ${r1Sign} ${r1Abs})(x ${r2Sign} ${r2Abs})`;
+    factoredFormDisplay.innerHTML = formHtml;
+  }
+}
+
+/**
  * Updates the table of values with 5 sample points centered on vertex
  * @param {number} a - Coefficient a
  * @param {number} b - Coefficient b
@@ -1216,6 +1301,8 @@ function renderWithCoeffs(a, b, c, updateUI = true) {
   if (updateUI) {
     updateStats(a, b, c);
     updateEquation();
+    updateVertexForm(a, b, c);
+    updateFactoredForm(a, b, c);
     updateTable(a, b, c);
   }
 }
