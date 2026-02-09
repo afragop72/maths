@@ -100,13 +100,18 @@
         <section class="canvas-wrap">
           <div class="canvas-header">
             <h2>Graph</h2>
-            <div class="legend">
-              <span class="dot curve-dot"></span>
-              <span>Curve</span>
-              <span class="dot vertex-dot"></span>
-              <span>Vertex</span>
-              <span class="dot root-dot"></span>
-              <span>Roots</span>
+            <div class="canvas-header-right">
+              <div class="legend">
+                <span class="dot curve-dot"></span>
+                <span>Curve</span>
+                <span class="dot vertex-dot"></span>
+                <span>Vertex</span>
+                <span class="dot root-dot"></span>
+                <span>Roots</span>
+              </div>
+              <button type="button" id="fullscreen-graph" class="icon-btn" title="Open in larger window">
+                ⛶
+              </button>
             </div>
           </div>
           <canvas id="graph" width="980" height="620"></canvas>

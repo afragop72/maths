@@ -22,6 +22,7 @@ const resetButton = document.getElementById("reset");
 const exportPngButton = document.getElementById("export-png");
 const exportSvgButton = document.getElementById("export-svg");
 const copyEquationButton = document.getElementById("copy-equation");
+const fullscreenGraphButton = document.getElementById("fullscreen-graph");
 const vertexLabel = document.getElementById("vertex");
 const discriminantLabel = document.getElementById("discriminant");
 const rootsLabel = document.getElementById("roots");
@@ -914,6 +915,275 @@ function copyEquation() {
   });
 }
 
+function openFullscreenGraph() {
+  const a = parseValue(inputs.a, defaultState.a);
+  const b = parseValue(inputs.b, defaultState.b);
+  const c = parseValue(inputs.c, defaultState.c);
+  const isAuto = autoZoomToggle.checked;
+
+  let xMin = parseValue(inputs.xMin, defaultState.xMin);
+  let xMax = parseValue(inputs.xMax, defaultState.xMax);
+
+  if (isAuto) {
+    const [autoXMin, autoXMax] = getAutoXRange(a, b, c);
+    [xMin, xMax] = clampRange(autoXMin, autoXMax);
+  } else {
+    [xMin, xMax] = clampRange(xMin, xMax);
+  }
+
+  const bounds = isAuto
+    ? getAutoBounds(a, b, c, xMin, xMax)
+    : getManualBounds(a, b, c, xMin, xMax);
+
+  const vertex = getVertex(a, b, c);
+  const disc = b * b - 4 * a * c;
+  const roots = getRoots(a, b, c);
+  const vertexText = Number.isFinite(vertex.x) ? "(" + vertex.x.toFixed(2) + ", " + vertex.y.toFixed(2) + ")" : "—";
+  const rootsText = roots.length === 0 ? "No real roots" : roots.map(r => r.toFixed(2)).join(", ");
+
+  const newWindow = window.open("", "Graph", "width=1400,height=900");
+
+  if (!newWindow) {
+    alert("Please allow popups to open the graph in a larger window");
+    return;
+  }
+
+  const html = '<!DOCTYPE html><html><head><title>Quadratic Graph - y = ' + a + 'x² + ' + b + 'x + ' + c + '</title>' +
+    '<style>' +
+    'body { margin: 0; padding: 20px; background: linear-gradient(135deg, #f7f3ea 0%, #f5f8ff 100%); ' +
+    'font-family: "Space Mono", monospace; display: flex; flex-direction: column; align-items: center; gap: 20px; }' +
+    'h1 { margin: 0; color: #0b0d17; font-size: 1.5rem; }' +
+    'canvas { background: linear-gradient(145deg, #ffffff 0%, #f5f7ff 100%); border-radius: 12px; ' +
+    'box-shadow: 0 20px 60px rgba(10, 14, 30, 0.12); cursor: crosshair; }' +
+    '.info { display: flex; gap: 24px; color: #0b0d17; font-size: 0.9rem; }' +
+    '.info-item { background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(10, 14, 30, 0.08); }' +
+    '.info-label { color: rgba(11, 13, 23, 0.55); font-weight: 600; }' +
+    '</style></head><body>' +
+    '<h1>y = ' + a + 'x² + ' + b + 'x + ' + c + '</h1>' +
+    '<canvas id="fullscreen-canvas" width="1300" height="800"></canvas>' +
+    '<div class="info">' +
+    '<div class="info-item"><span class="info-label">Vertex:</span> ' + vertexText + '</div>' +
+    '<div class="info-item"><span class="info-label">Discriminant:</span> ' + disc.toFixed(2) + '</div>' +
+    '<div class="info-item"><span class="info-label">Roots:</span> ' + rootsText + '</div>' +
+    '</div></body></html>';
+
+  newWindow.document.write(html);
+  newWindow.document.close();
+
+  setTimeout(function() {
+    const fsCanvas = newWindow.document.getElementById("fullscreen-canvas");
+    if (!fsCanvas) return;
+
+    const fsCtx = fsCanvas.getContext("2d");
+    const fsPadding = 60;
+
+    function toScreenFS(x, y) {
+      const xMin = bounds.xMin;
+      const xMax = bounds.xMax;
+      const yMin = bounds.yMin;
+      const yMax = bounds.yMax;
+      const width = fsCanvas.width - fsPadding * 2;
+      const height = fsCanvas.height - fsPadding * 2;
+      const xRatio = (x - xMin) / (xMax - xMin);
+      const yRatio = (y - yMin) / (yMax - yMin);
+      return {
+        x: fsPadding + xRatio * width,
+        y: fsCanvas.height - fsPadding - yRatio * height,
+      };
+    }
+
+    fsCtx.clearRect(0, 0, fsCanvas.width, fsCanvas.height);
+
+    const xStart = Math.ceil(bounds.xMin);
+    const xEnd = Math.floor(bounds.xMax);
+    const yStart = Math.ceil(bounds.yMin);
+    const yEnd = Math.floor(bounds.yMax);
+
+    for (let x = xStart; x <= xEnd; x += 1) {
+      const isMajor = x % 5 === 0;
+      const color = isMajor ? gridMajor : gridMinor;
+      const point = toScreenFS(x, bounds.yMin);
+      fsCtx.strokeStyle = color;
+      fsCtx.lineWidth = isMajor ? 1.5 : 1;
+      fsCtx.beginPath();
+      fsCtx.moveTo(point.x, fsPadding);
+      fsCtx.lineTo(point.x, fsCanvas.height - fsPadding);
+      fsCtx.stroke();
+    }
+
+    for (let y = yStart; y <= yEnd; y += 1) {
+      const isMajor = y % 5 === 0;
+      const color = isMajor ? gridMajor : gridMinor;
+      const point = toScreenFS(bounds.xMin, y);
+      fsCtx.strokeStyle = color;
+      fsCtx.lineWidth = isMajor ? 1.5 : 1;
+      fsCtx.beginPath();
+      fsCtx.moveTo(fsPadding, point.y);
+      fsCtx.lineTo(fsCanvas.width - fsPadding, point.y);
+      fsCtx.stroke();
+    }
+
+    fsCtx.strokeStyle = axisColor;
+    fsCtx.lineWidth = 3;
+    const zero = toScreenFS(0, 0);
+    if (zero.x >= fsPadding && zero.x <= fsCanvas.width - fsPadding) {
+      fsCtx.beginPath();
+      fsCtx.moveTo(zero.x, fsPadding);
+      fsCtx.lineTo(zero.x, fsCanvas.height - fsPadding);
+      fsCtx.stroke();
+
+      const arrowSize = 10;
+      fsCtx.fillStyle = axisColor;
+      fsCtx.beginPath();
+      fsCtx.moveTo(zero.x, fsPadding);
+      fsCtx.lineTo(zero.x - arrowSize / 2, fsPadding + arrowSize);
+      fsCtx.lineTo(zero.x + arrowSize / 2, fsPadding + arrowSize);
+      fsCtx.closePath();
+      fsCtx.fill();
+    }
+    if (zero.y >= fsPadding && zero.y <= fsCanvas.height - fsPadding) {
+      fsCtx.beginPath();
+      fsCtx.moveTo(fsPadding, zero.y);
+      fsCtx.lineTo(fsCanvas.width - fsPadding, zero.y);
+      fsCtx.stroke();
+
+      const arrowSize = 10;
+      fsCtx.fillStyle = axisColor;
+      fsCtx.beginPath();
+      fsCtx.moveTo(fsCanvas.width - fsPadding, zero.y);
+      fsCtx.lineTo(fsCanvas.width - fsPadding - arrowSize, zero.y - arrowSize / 2);
+      fsCtx.lineTo(fsCanvas.width - fsPadding - arrowSize, zero.y + arrowSize / 2);
+      fsCtx.closePath();
+      fsCtx.fill();
+    }
+
+    const axisY = zero.y >= fsPadding && zero.y <= fsCanvas.height - fsPadding
+      ? zero.y
+      : fsCanvas.height - fsPadding;
+    const axisX = zero.x >= fsPadding && zero.x <= fsCanvas.width - fsPadding
+      ? zero.x
+      : fsPadding;
+
+    fsCtx.fillStyle = tickColor;
+    fsCtx.font = "14px Space Mono, monospace";
+    fsCtx.textAlign = "center";
+    fsCtx.textBaseline = "top";
+
+    for (let x = xStart; x <= xEnd; x += 1) {
+      if (x % 5 !== 0) continue;
+      const xPos = toScreenFS(x, bounds.yMin).x;
+      fsCtx.fillText(formatTick(x), xPos, axisY + 8);
+    }
+
+    fsCtx.textAlign = "right";
+    fsCtx.textBaseline = "middle";
+    for (let y = yStart; y <= yEnd; y += 1) {
+      if (y % 5 !== 0) continue;
+      const yPos = toScreenFS(bounds.xMin, y).y;
+      fsCtx.fillText(formatTick(y), axisX - 8, yPos);
+    }
+
+    if (a !== 0 && Number.isFinite(vertex.x)) {
+      const point = toScreenFS(vertex.x, bounds.yMin);
+      if (point.x >= fsPadding && point.x <= fsCanvas.width - fsPadding) {
+        fsCtx.strokeStyle = symmetryLineColor;
+        fsCtx.lineWidth = 2;
+        fsCtx.setLineDash([10, 8]);
+        fsCtx.beginPath();
+        fsCtx.moveTo(point.x, fsPadding);
+        fsCtx.lineTo(point.x, fsCanvas.height - fsPadding);
+        fsCtx.stroke();
+        fsCtx.setLineDash([]);
+      }
+    }
+
+    fsCtx.lineWidth = 4;
+    fsCtx.strokeStyle = curveColor;
+    fsCtx.shadowColor = curveShadow;
+    fsCtx.shadowBlur = 15;
+    fsCtx.beginPath();
+    for (let i = 0; i <= CURVE_STEPS; i += 1) {
+      const x = bounds.xMin + (i / CURVE_STEPS) * (bounds.xMax - bounds.xMin);
+      const y = evaluateQuadratic(a, b, c, x);
+      const point = toScreenFS(x, y);
+      if (i === 0) {
+        fsCtx.moveTo(point.x, point.y);
+      } else {
+        fsCtx.lineTo(point.x, point.y);
+      }
+    }
+    fsCtx.stroke();
+    fsCtx.shadowBlur = 0;
+
+    if (a !== 0 && Number.isFinite(vertex.x) && Number.isFinite(vertex.y)) {
+      const point = toScreenFS(vertex.x, vertex.y);
+      if (point.x >= fsPadding && point.x <= fsCanvas.width - fsPadding &&
+          point.y >= fsPadding && point.y <= fsCanvas.height - fsPadding) {
+        fsCtx.fillStyle = vertexColor;
+        fsCtx.strokeStyle = "#fff";
+        fsCtx.lineWidth = 4;
+        fsCtx.beginPath();
+        fsCtx.arc(point.x, point.y, 10, 0, Math.PI * 2);
+        fsCtx.fill();
+        fsCtx.stroke();
+
+        fsCtx.fillStyle = vertexColor;
+        fsCtx.font = "bold 14px Space Mono, monospace";
+        fsCtx.textAlign = "center";
+        fsCtx.textBaseline = "bottom";
+        const label = "(" + vertex.x.toFixed(1) + ", " + vertex.y.toFixed(1) + ")";
+        const labelY = point.y > fsCanvas.height / 2 ? point.y - 18 : point.y + 30;
+
+        const metrics = fsCtx.measureText(label);
+        const labelPadding = 8;
+        fsCtx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        fsCtx.fillRect(
+          point.x - metrics.width / 2 - labelPadding,
+          labelY - 16,
+          metrics.width + labelPadding * 2,
+          20
+        );
+
+        fsCtx.fillStyle = vertexColor;
+        fsCtx.fillText(label, point.x, labelY);
+      }
+    }
+
+    roots.forEach(function(root) {
+      const point = toScreenFS(root, 0);
+      if (point.x >= fsPadding && point.x <= fsCanvas.width - fsPadding &&
+          point.y >= fsPadding && point.y <= fsCanvas.height - fsPadding) {
+        fsCtx.fillStyle = rootColor;
+        fsCtx.strokeStyle = "#fff";
+        fsCtx.lineWidth = 4;
+        fsCtx.beginPath();
+        fsCtx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+        fsCtx.fill();
+        fsCtx.stroke();
+
+        fsCtx.fillStyle = rootColor;
+        fsCtx.font = "bold 13px Space Mono, monospace";
+        fsCtx.textAlign = "center";
+        fsCtx.textBaseline = "top";
+        const label = "x=" + root.toFixed(2);
+
+        const metrics = fsCtx.measureText(label);
+        const labelPadding = 6;
+        fsCtx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        fsCtx.fillRect(
+          point.x - metrics.width / 2 - labelPadding,
+          point.y + 14,
+          metrics.width + labelPadding * 2,
+          18
+        );
+
+        fsCtx.fillStyle = rootColor;
+        fsCtx.fillText(label, point.x, point.y + 16);
+      }
+    });
+  }, 100);
+}
+
 function exportSvg() {
   const width = canvas.width;
   const height = canvas.height;
@@ -1030,6 +1300,7 @@ resetButton.addEventListener("click", resetForm);
 exportPngButton.addEventListener("click", exportPng);
 exportSvgButton.addEventListener("click", exportSvg);
 copyEquationButton.addEventListener("click", copyEquation);
+fullscreenGraphButton.addEventListener("click", openFullscreenGraph);
 
 canvas.addEventListener("mousemove", (event) => {
   const rect = canvas.getBoundingClientRect();
