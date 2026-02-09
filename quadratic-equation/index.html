@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quadratic Graphs</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Math Lab</p>
+          <h1>Quadratic Graph Studio</h1>
+          <p class="subhead">
+            Explore parabolas with precision. Adjust coefficients and instantly see
+            the curve update.
+          </p>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel">
+          <h2>Equation</h2>
+          <p class="equation" id="equation-display">y = 1x² + 0x + 0</p>
+
+          <form id="controls" class="controls" autocomplete="off">
+            <label>
+              <span>a</span>
+              <div class="field">
+                <input type="range" min="-5" max="5" step="0.1" id="slider-a" value="1" />
+                <input type="text" inputmode="decimal" id="coef-a" value="1" />
+              </div>
+            </label>
+            <label>
+              <span>b</span>
+              <div class="field">
+                <input type="range" min="-10" max="10" step="0.1" id="slider-b" value="0" />
+                <input type="text" inputmode="decimal" id="coef-b" value="0" />
+              </div>
+            </label>
+            <label>
+              <span>c</span>
+              <div class="field">
+                <input type="range" min="-10" max="10" step="0.1" id="slider-c" value="0" />
+                <input type="text" inputmode="decimal" id="coef-c" value="0" />
+              </div>
+            </label>
+            <label>
+              <span>X min</span>
+              <input type="number" step="0.5" id="x-min" value="-10" />
+            </label>
+            <label>
+              <span>X max</span>
+              <input type="number" step="0.5" id="x-max" value="10" />
+            </label>
+            <label class="toggle">
+              <span>Auto zoom</span>
+              <input type="checkbox" id="auto-zoom" checked />
+            </label>
+            <button type="button" id="reset">Reset</button>
+          </form>
+
+          <div class="stats">
+            <div>
+              <h3>Vertex</h3>
+              <p id="vertex">(0, 0)</p>
+            </div>
+            <div>
+              <h3>Discriminant</h3>
+              <p id="discriminant">0</p>
+            </div>
+            <div>
+              <h3>Roots</h3>
+              <p id="roots">—</p>
+            </div>
+          </div>
+
+          <div class="exports">
+            <button type="button" id="export-png">Export PNG</button>
+            <button type="button" id="export-svg">Export SVG</button>
+          </div>
+        </section>
+
+        <section class="canvas-wrap">
+          <div class="canvas-header">
+            <h2>Graph</h2>
+            <div class="legend">
+              <span class="dot"></span>
+              <span>Quadratic curve</span>
+            </div>
+          </div>
+          <canvas id="graph" width="980" height="620"></canvas>
+          <p class="hint">Tip: expand the range to see wide or narrow parabolas.</p>
+
+          <div class="table-wrap">
+            <h3>Table of Values</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>x</th>
+                  <th>y</th>
+                </tr>
+              </thead>
+              <tbody id="values-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
