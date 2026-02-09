@@ -127,6 +127,7 @@ h1 {
   align-items: center;
   line-height: 1;
   margin: 0 2px;
+  vertical-align: middle;
 }
 
 .fraction .top {
