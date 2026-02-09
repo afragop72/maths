@@ -254,7 +254,18 @@ h1 {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+}
+
+.legend .curve-dot {
   background: var(--accent);
+}
+
+.legend .vertex-dot {
+  background: #3b82f6;
+}
+
+.legend .root-dot {
+  background: #10b981;
 }
 
 canvas {
@@ -262,6 +273,7 @@ canvas {
   border-radius: 18px;
   background: linear-gradient(145deg, #ffffff 0%, #f5f7ff 100%);
   border: 1px solid rgba(15, 23, 42, 0.08);
+  cursor: crosshair;
 }
 
 .hint {

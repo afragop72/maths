@@ -47,6 +47,28 @@ const tickColor = "rgba(15, 23, 42, 0.65)";
 const curveColor = "#ff6b3d";
 const curveShadow = "rgba(255, 107, 61, 0.25)";
 const CURVE_STEPS = 180;
+const vertexColor = "#3b82f6";
+const rootColor = "#10b981";
+const symmetryLineColor = "rgba(59, 130, 246, 0.3)";
+
+let hoverState = {
+  isHovering: false,
+  canvasX: 0,
+  canvasY: 0,
+  mathX: 0,
+  mathY: 0,
+  bounds: null,
+  coefficients: { a: 1, b: 0, c: 0 }
+};
+
+let animationState = {
+  isAnimating: false,
+  startTime: 0,
+  duration: 300,
+  startCoeffs: { a: 1, b: 0, c: 0 },
+  targetCoeffs: { a: 1, b: 0, c: 0 },
+  animationFrame: null
+};
 
 function normalizeFractionString(raw) {
   const value = raw.trim();
@@ -99,6 +121,14 @@ function clampRange(min, max) {
   return [min, max];
 }
 
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function lerp(start, end, t) {
+  return start + (end - start) * t;
+}
+
 function evaluateQuadratic(a, b, c, x) {
   return a * x * x + b * x + c;
 }
@@ -142,6 +172,18 @@ function toScreen(x, y, bounds) {
   };
 }
 
+function toMath(screenX, screenY, bounds) {
+  const { xMin, xMax, yMin, yMax } = bounds;
+  const width = canvas.width - padding * 2;
+  const height = canvas.height - padding * 2;
+  const xRatio = (screenX - padding) / width;
+  const yRatio = (canvas.height - padding - screenY) / height;
+  return {
+    x: xMin + xRatio * (xMax - xMin),
+    y: yMin + yRatio * (yMax - yMin),
+  };
+}
+
 function formatTick(value) {
   if (Math.abs(value) < 1e-6) {
     return "0";
@@ -181,19 +223,37 @@ function drawGrid(bounds) {
   }
 
   ctx.strokeStyle = axisColor;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   const zero = toScreen(0, 0, bounds);
   if (zero.x >= padding && zero.x <= canvas.width - padding) {
     ctx.beginPath();
     ctx.moveTo(zero.x, padding);
     ctx.lineTo(zero.x, canvas.height - padding);
     ctx.stroke();
+
+    const arrowSize = 8;
+    ctx.fillStyle = axisColor;
+    ctx.beginPath();
+    ctx.moveTo(zero.x, padding);
+    ctx.lineTo(zero.x - arrowSize / 2, padding + arrowSize);
+    ctx.lineTo(zero.x + arrowSize / 2, padding + arrowSize);
+    ctx.closePath();
+    ctx.fill();
   }
   if (zero.y >= padding && zero.y <= canvas.height - padding) {
     ctx.beginPath();
     ctx.moveTo(padding, zero.y);
     ctx.lineTo(canvas.width - padding, zero.y);
     ctx.stroke();
+
+    const arrowSize = 8;
+    ctx.fillStyle = axisColor;
+    ctx.beginPath();
+    ctx.moveTo(canvas.width - padding, zero.y);
+    ctx.lineTo(canvas.width - padding - arrowSize, zero.y - arrowSize / 2);
+    ctx.lineTo(canvas.width - padding - arrowSize, zero.y + arrowSize / 2);
+    ctx.closePath();
+    ctx.fill();
   }
 
   const axisY = zero.y >= padding && zero.y <= canvas.height - padding
@@ -247,6 +307,198 @@ function drawCurve(a, b, c, bounds) {
   }
   ctx.stroke();
   ctx.shadowBlur = 0;
+}
+
+function drawAxisOfSymmetry(a, b, c, bounds) {
+  if (a === 0) {
+    return;
+  }
+  const vertex = getVertex(a, b, c);
+  if (!Number.isFinite(vertex.x)) {
+    return;
+  }
+
+  const point = toScreen(vertex.x, bounds.yMin, bounds);
+  if (point.x < padding || point.x > canvas.width - padding) {
+    return;
+  }
+
+  ctx.strokeStyle = symmetryLineColor;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath();
+  ctx.moveTo(point.x, padding);
+  ctx.lineTo(point.x, canvas.height - padding);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawVertexMarker(a, b, c, bounds) {
+  if (a === 0) {
+    return;
+  }
+  const vertex = getVertex(a, b, c);
+  if (!Number.isFinite(vertex.x) || !Number.isFinite(vertex.y)) {
+    return;
+  }
+
+  const point = toScreen(vertex.x, vertex.y, bounds);
+  if (point.x < padding || point.x > canvas.width - padding ||
+      point.y < padding || point.y > canvas.height - padding) {
+    return;
+  }
+
+  ctx.fillStyle = vertexColor;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = vertexColor;
+  ctx.font = "bold 12px Space Mono, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+  const label = `(${vertex.x.toFixed(1)}, ${vertex.y.toFixed(1)})`;
+  const labelY = point.y > canvas.height / 2 ? point.y - 15 : point.y + 25;
+
+  const metrics = ctx.measureText(label);
+  const labelPadding = 6;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.fillRect(
+    point.x - metrics.width / 2 - labelPadding,
+    labelY - 14,
+    metrics.width + labelPadding * 2,
+    18
+  );
+
+  ctx.fillStyle = vertexColor;
+  ctx.fillText(label, point.x, labelY);
+}
+
+function drawRootMarkers(a, b, c, bounds) {
+  const roots = getRoots(a, b, c);
+  if (roots.length === 0) {
+    return;
+  }
+
+  roots.forEach((root) => {
+    const point = toScreen(root, 0, bounds);
+    if (point.x < padding || point.x > canvas.width - padding ||
+        point.y < padding || point.y > canvas.height - padding) {
+      return;
+    }
+
+    ctx.fillStyle = rootColor;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = rootColor;
+    ctx.font = "bold 11px Space Mono, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const label = `x=${root.toFixed(2)}`;
+
+    const metrics = ctx.measureText(label);
+    const labelPadding = 5;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.fillRect(
+      point.x - metrics.width / 2 - labelPadding,
+      point.y + 12,
+      metrics.width + labelPadding * 2,
+      16
+    );
+
+    ctx.fillStyle = rootColor;
+    ctx.fillText(label, point.x, point.y + 14);
+  });
+}
+
+function drawCrosshair() {
+  if (!hoverState.isHovering) {
+    return;
+  }
+
+  const x = hoverState.canvasX;
+  const y = hoverState.canvasY;
+
+  if (x < padding || x > canvas.width - padding ||
+      y < padding || y > canvas.height - padding) {
+    return;
+  }
+
+  ctx.strokeStyle = "rgba(11, 13, 23, 0.3)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+
+  ctx.beginPath();
+  ctx.moveTo(x, padding);
+  ctx.lineTo(x, canvas.height - padding);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(padding, y);
+  ctx.lineTo(canvas.width - padding, y);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#0b0d17";
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const curveY = evaluateQuadratic(
+    hoverState.coefficients.a,
+    hoverState.coefficients.b,
+    hoverState.coefficients.c,
+    hoverState.mathX
+  );
+  const curvePoint = toScreen(hoverState.mathX, curveY, hoverState.bounds);
+
+  if (curvePoint.y >= padding && curvePoint.y <= canvas.height - padding) {
+    ctx.fillStyle = curveColor;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(curvePoint.x, curvePoint.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  const label = `x: ${hoverState.mathX.toFixed(2)}, y: ${curveY.toFixed(2)}`;
+  ctx.font = "bold 12px Space Mono, monospace";
+  const metrics = ctx.measureText(label);
+  const tooltipPadding = 8;
+  const tooltipWidth = metrics.width + tooltipPadding * 2;
+  const tooltipHeight = 24;
+
+  let tooltipX = x + 15;
+  let tooltipY = y - tooltipHeight - 10;
+
+  if (tooltipX + tooltipWidth > canvas.width - padding) {
+    tooltipX = x - tooltipWidth - 15;
+  }
+  if (tooltipY < padding) {
+    tooltipY = y + 15;
+  }
+
+  ctx.fillStyle = "rgba(11, 13, 23, 0.95)";
+  ctx.beginRadius = 8;
+  ctx.fillRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, tooltipX + tooltipPadding, tooltipY + tooltipHeight / 2);
 }
 
 function updateStats(a, b, c) {
@@ -469,10 +721,7 @@ function getManualBounds(a, b, c, xMin, xMax) {
 }
 
 // Main render loop: compute bounds, draw grid/curve, update stats + table.
-function render() {
-  const a = parseValue(inputs.a, defaultState.a);
-  const b = parseValue(inputs.b, defaultState.b);
-  const c = parseValue(inputs.c, defaultState.c);
+function renderWithCoeffs(a, b, c, updateUI = true) {
   const isAuto = autoZoomToggle.checked;
 
   let xMin = parseValue(inputs.xMin, defaultState.xMin);
@@ -489,17 +738,79 @@ function render() {
     ? getAutoBounds(a, b, c, xMin, xMax)
     : getManualBounds(a, b, c, xMin, xMax);
 
-  if (isAuto) {
+  if (isAuto && updateUI) {
     inputs.xMin.value = bounds.xMin.toFixed(2);
     inputs.xMax.value = bounds.xMax.toFixed(2);
   }
 
+  hoverState.bounds = bounds;
+  hoverState.coefficients = { a, b, c };
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid(bounds);
+  drawAxisOfSymmetry(a, b, c, bounds);
   drawCurve(a, b, c, bounds);
-  updateStats(a, b, c);
-  updateEquation();
-  updateTable(a, b, c);
+  drawVertexMarker(a, b, c, bounds);
+  drawRootMarkers(a, b, c, bounds);
+  drawCrosshair();
+
+  if (updateUI) {
+    updateStats(a, b, c);
+    updateEquation();
+    updateTable(a, b, c);
+  }
+}
+
+function animate(timestamp) {
+  if (!animationState.startTime) {
+    animationState.startTime = timestamp;
+  }
+
+  const elapsed = timestamp - animationState.startTime;
+  const progress = Math.min(elapsed / animationState.duration, 1);
+  const easedProgress = easeOutCubic(progress);
+
+  const a = lerp(animationState.startCoeffs.a, animationState.targetCoeffs.a, easedProgress);
+  const b = lerp(animationState.startCoeffs.b, animationState.targetCoeffs.b, easedProgress);
+  const c = lerp(animationState.startCoeffs.c, animationState.targetCoeffs.c, easedProgress);
+
+  renderWithCoeffs(a, b, c, progress === 1);
+
+  if (progress < 1) {
+    animationState.animationFrame = requestAnimationFrame(animate);
+  } else {
+    animationState.isAnimating = false;
+    animationState.startTime = 0;
+  }
+}
+
+function render() {
+  const a = parseValue(inputs.a, defaultState.a);
+  const b = parseValue(inputs.b, defaultState.b);
+  const c = parseValue(inputs.c, defaultState.c);
+
+  if (animationState.isAnimating) {
+    if (animationState.animationFrame) {
+      cancelAnimationFrame(animationState.animationFrame);
+    }
+  }
+
+  const prevA = animationState.targetCoeffs.a;
+  const prevB = animationState.targetCoeffs.b;
+  const prevC = animationState.targetCoeffs.c;
+
+  const hasChanged = (prevA !== a || prevB !== b || prevC !== c);
+
+  if (hasChanged && !hoverState.isHovering) {
+    animationState.startCoeffs = { a: prevA, b: prevB, c: prevC };
+    animationState.targetCoeffs = { a, b, c };
+    animationState.isAnimating = true;
+    animationState.startTime = 0;
+    animationState.animationFrame = requestAnimationFrame(animate);
+  } else {
+    animationState.targetCoeffs = { a, b, c };
+    renderWithCoeffs(a, b, c, true);
+  }
 }
 
 function syncCoefficient(source, target) {
@@ -578,6 +889,16 @@ function exportSvg() {
     svgParts.push(`<line x1="${padding}" y1="${zero.y}" x2="${width - padding}" y2="${zero.y}" stroke="${axisColor}" stroke-width="2"/>`);
   }
 
+  if (a !== 0) {
+    const vertex = getVertex(a, b, c);
+    if (Number.isFinite(vertex.x)) {
+      const vPoint = toScreen(vertex.x, bounds.yMin, bounds);
+      if (vPoint.x >= padding && vPoint.x <= width - padding) {
+        svgParts.push(`<line x1="${vPoint.x}" y1="${padding}" x2="${vPoint.x}" y2="${height - padding}" stroke="${symmetryLineColor}" stroke-width="2" stroke-dasharray="8,6"/>`);
+      }
+    }
+  }
+
   const curvePoints = [];
   const curveSteps = CURVE_STEPS;
   for (let i = 0; i <= curveSteps; i += 1) {
@@ -587,6 +908,32 @@ function exportSvg() {
     curvePoints.push(`${point.x.toFixed(2)},${point.y.toFixed(2)}`);
   }
   svgParts.push(`<polyline fill="none" stroke="${curveColor}" stroke-width="3" points="${curvePoints.join(" ")}"/>`);
+
+  if (a !== 0) {
+    const vertex = getVertex(a, b, c);
+    if (Number.isFinite(vertex.x) && Number.isFinite(vertex.y)) {
+      const vPoint = toScreen(vertex.x, vertex.y, bounds);
+      if (vPoint.x >= padding && vPoint.x <= width - padding &&
+          vPoint.y >= padding && vPoint.y <= height - padding) {
+        svgParts.push(`<circle cx="${vPoint.x}" cy="${vPoint.y}" r="8" fill="${vertexColor}" stroke="#fff" stroke-width="3"/>`);
+        const label = `(${vertex.x.toFixed(1)}, ${vertex.y.toFixed(1)})`;
+        const labelY = vPoint.y > height / 2 ? vPoint.y - 15 : vPoint.y + 25;
+        svgParts.push(`<text x="${vPoint.x}" y="${labelY}" fill="${vertexColor}" font-family="Space Mono, monospace" font-size="12" font-weight="bold" text-anchor="middle">${label}</text>`);
+      }
+    }
+  }
+
+  const roots = getRoots(a, b, c);
+  roots.forEach((root) => {
+    const rPoint = toScreen(root, 0, bounds);
+    if (rPoint.x >= padding && rPoint.x <= width - padding &&
+        rPoint.y >= padding && rPoint.y <= height - padding) {
+      svgParts.push(`<circle cx="${rPoint.x}" cy="${rPoint.y}" r="6" fill="${rootColor}" stroke="#fff" stroke-width="3"/>`);
+      const label = `x=${root.toFixed(2)}`;
+      svgParts.push(`<text x="${rPoint.x}" y="${rPoint.y + 26}" fill="${rootColor}" font-family="Space Mono, monospace" font-size="11" font-weight="bold" text-anchor="middle">${label}</text>`);
+    }
+  });
+
   svgParts.push("</svg>");
 
   const svgContent = svgParts.join("");
@@ -613,5 +960,30 @@ autoZoomToggle.addEventListener("change", render);
 resetButton.addEventListener("click", resetForm);
 exportPngButton.addEventListener("click", exportPng);
 exportSvgButton.addEventListener("click", exportSvg);
+
+canvas.addEventListener("mousemove", (event) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const canvasX = (event.clientX - rect.left) * scaleX;
+  const canvasY = (event.clientY - rect.top) * scaleY;
+
+  hoverState.isHovering = true;
+  hoverState.canvasX = canvasX;
+  hoverState.canvasY = canvasY;
+
+  if (hoverState.bounds) {
+    const mathCoords = toMath(canvasX, canvasY, hoverState.bounds);
+    hoverState.mathX = mathCoords.x;
+    hoverState.mathY = mathCoords.y;
+  }
+
+  render();
+});
+
+canvas.addEventListener("mouseleave", () => {
+  hoverState.isHovering = false;
+  render();
+});
 
 render();
