@@ -1,11 +1,24 @@
-const { useEffect, useMemo, useRef, useState } = React;
+const { useMemo, useRef, useState } = React;
+
+/* ─── Constants ─── */
 
 const MAX_STEP = 5;
 const VIEWPORT = { w: 820, h: 560 };
 const PAD = 80;
 const MAX_INNER_W = VIEWPORT.w - PAD * 2;
 const MAX_INNER_H = VIEWPORT.h - PAD * 2;
-const SVG_FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+const SVG_FONT = '"Manrope", "Segoe UI", system-ui, sans-serif';
+const SVG_MONO = '"Space Mono", "SFMono-Regular", Consolas, monospace';
+
+const PRESETS = [
+  { label: "(x + 3)(x + 2)",   bin1: "(x+3)",  bin2: "(x+2)"  },
+  { label: "(x \u2212 7)(x + 2)",  bin1: "(x-7)",  bin2: "(x+2)"  },
+  { label: "(2x \u2212 5)(x + 3)", bin1: "(2x-5)", bin2: "(x+3)"  },
+  { label: "(\u2212x + 3)(4x \u2212 1)", bin1: "(-x+3)", bin2: "(4x-1)" },
+  { label: "(2x)(x \u2212 5)",     bin1: "(2x)",   bin2: "(x-5)"  },
+];
+
+/* ─── Math Utilities (unchanged) ─── */
 
 function absNonNeg(n) {
   if (!Number.isFinite(n)) return 0;
@@ -46,7 +59,7 @@ function parseLinearBinomial(raw) {
   }
 
   const vars = new Set([...input].filter(isValidVarChar));
-  if (vars.size > 1) return { ok: false, error: `Only one variable supported. Found: ${[...vars].join(", ")}` };
+  if (vars.size > 1) return { ok: false, error: `Only one variable allowed. Found: ${[...vars].join(", ")}` };
 
   const idx = input.indexOf(varName);
   const coefStrRaw = input.slice(0, idx);
@@ -55,7 +68,7 @@ function parseLinearBinomial(raw) {
   let b = 0;
   if (tail.length > 0) {
     if (!(tail.startsWith("+") || tail.startsWith("-"))) {
-      return { ok: false, error: `Expected + or - after ${varName}. Got "${tail}"` };
+      return { ok: false, error: `Expected + or \u2212 after ${varName}. Got "${tail}"` };
     }
     const bNum = Number(tail);
     if (!Number.isFinite(bNum)) return { ok: false, error: `Invalid constant part: "${tail}"` };
@@ -87,8 +100,8 @@ function fmtNumber(n) {
 
 function fmtSigned(n) {
   const s = fmtNumber(n);
-  if (s === "0") return "+0";
-  return n >= 0 ? `+${s}` : s;
+  if (s === "0") return "+ 0";
+  return n >= 0 ? `+ ${s}` : `\u2212 ${fmtNumber(Math.abs(n))}`;
 }
 
 function fmtLinearTerm(coef, varName) {
@@ -100,25 +113,152 @@ function fmtLinearTerm(coef, varName) {
 
 function polyToString(A, B, C, varName) {
   const parts = [];
-
   const pushTerm = (coeff, pow) => {
     if (!Number.isFinite(coeff) || coeff === 0) return;
     const abs = Math.abs(coeff);
-    const sign = coeff < 0 ? "-" : "+";
+    const sign = coeff < 0 ? "\u2212" : "+";
     const coefPart = (abs === 1 && pow > 0) ? "" : fmtNumber(abs);
-    const varPart = pow === 0 ? "" : (pow === 1 ? varName : `${varName}^${pow}`);
+    const varPart = pow === 0 ? "" : (pow === 1 ? varName : `${varName}\u00b2`);
     const txt = `${coefPart}${varPart}` || "0";
-
-    if (parts.length === 0) parts.push((sign === "-" ? "-" : "") + txt);
+    if (parts.length === 0) parts.push((sign === "\u2212" ? "\u2212" : "") + txt);
     else parts.push(` ${sign} ${txt}`);
   };
-
   pushTerm(A, 2);
   pushTerm(B, 1);
   pushTerm(C, 0);
-
   return parts.length ? parts.join("") : "0";
 }
+
+function computeFoil(p, q) {
+  const { a, b, varName } = p;
+  const { a: c, b: d } = q;
+  const ac = a * c;
+  const ad = a * d;
+  const bc = b * c;
+  const bd = b * d;
+  return {
+    varName, a, b, c, d,
+    ac, ad, bc, bd,
+    A: ac, B: ad + bc, C: bd,
+    expanded: polyToString(ac, ad + bc, bd, varName),
+  };
+}
+
+/* ─── Export Utilities ─── */
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function svgToString(svgEl) {
+  const clone = svgEl.cloneNode(true);
+  const vb = clone.getAttribute("viewBox") || `0 0 ${VIEWPORT.w} ${VIEWPORT.h}`;
+  const [, , w, h] = vb.split(/\s+/).map(Number);
+  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  bg.setAttribute("x", "0");
+  bg.setAttribute("y", "0");
+  bg.setAttribute("width", String(w || VIEWPORT.w));
+  bg.setAttribute("height", String(h || VIEWPORT.h));
+  bg.setAttribute("fill", "rgba(0,0,0,0)");
+  clone.insertBefore(bg, clone.firstChild);
+  if (!clone.getAttribute("xmlns")) clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  if (!clone.getAttribute("xmlns:xlink")) clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+  const serializer = new XMLSerializer();
+  const str = serializer.serializeToString(clone);
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${str}`;
+}
+
+async function exportSvg(svgEl, filename) {
+  const svgStr = svgToString(svgEl);
+  const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+  downloadBlob(blob, filename);
+}
+
+async function exportPng(svgEl, filename, scale = 2) {
+  const svgStr = svgToString(svgEl);
+  const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(svgBlob);
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    const vb = svgEl.getAttribute("viewBox") || `0 0 ${VIEWPORT.w} ${VIEWPORT.h}`;
+    const [, , w, h] = vb.split(/\s+/).map(Number);
+    const width = (w || VIEWPORT.w) * scale;
+    const height = (h || VIEWPORT.h) * scale;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f7f3ea";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    downloadBlob(pngBlob, filename);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/* ─── Educational Step Content ─── */
+
+function getStepContent(step, model) {
+  if (!model) return null;
+  const v = model.varName;
+
+  const bin1Str = `${fmtLinearTerm(model.a, v)} ${fmtSigned(model.b)}`;
+  const bin2Str = `${fmtLinearTerm(model.c, v)} ${fmtSigned(model.d)}`;
+
+  return [
+    {
+      label: "Step 1 of 6",
+      heading: "The Whole Product",
+      body: `We want to multiply (${bin1Str}) by (${bin2Str}). Think of the answer as the area of a rectangle whose sides are the two binomials.`,
+    },
+    {
+      label: "Step 2 of 6",
+      heading: "Split into Four Parts",
+      body: `Each binomial has two terms. Splitting both sides gives us four smaller rectangles inside the big one \u2014 this is the heart of the FOIL method: First, Outer, Inner, Last.`,
+    },
+    {
+      label: "Step 3 of 6",
+      heading: "Label the Sides",
+      body: `The top edge is split into \u201c${fmtLinearTerm(model.a, v)}\u201d and \u201c${fmtNumber(model.b)}\u201d (terms of the first binomial). The left edge is split into \u201c${fmtLinearTerm(model.c, v)}\u201d and \u201c${fmtNumber(model.d)}\u201d (terms of the second).`,
+    },
+    {
+      label: "Step 4 of 6",
+      heading: "Fill the Four Areas (FOIL)",
+      body: `Each small rectangle\u2019s area equals its width \u00d7 height:`,
+      math: `First:  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.ac)}${v}\u00b2\nOuter:  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.ad)}${v}\nInner:  ${fmtNumber(model.b)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.bc)}${v}\nLast:  ${fmtNumber(model.b)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.bd)}`,
+      foilLegend: true,
+    },
+    {
+      label: "Step 5 of 6",
+      heading: "Read the Products",
+      body: `Each sub-rectangle is now labeled with its value. Notice that the Outer (${fmtNumber(model.ad)}${v}) and Inner (${fmtNumber(model.bc)}${v}) terms are \u201clike terms\u201d \u2014 they both contain ${v} to the first power.`,
+      math: `${fmtNumber(model.ac)}${v}\u00b2  +  ${fmtNumber(model.ad)}${v}  +  ${fmtNumber(model.bc)}${v}  +  ${fmtNumber(model.bd)}`,
+    },
+    {
+      label: "Step 6 of 6",
+      heading: "Combine Like Terms",
+      body: `Add the Outer and Inner terms: ${fmtNumber(model.ad)}${v} + ${fmtNumber(model.bc)}${v} = ${fmtNumber(model.B)}${v}. This gives us the final answer!`,
+      isFinal: true,
+    },
+  ][step] || null;
+}
+
+/* ─── React Components ─── */
 
 function PolyDisplay({ A, B, C, varName }) {
   const terms = [];
@@ -145,99 +285,142 @@ function PolyDisplay({ A, B, C, varName }) {
   return terms.length ? <>{terms}</> : <>0</>;
 }
 
-function computeFoil(p, q) {
-  const { a, b, varName } = p;
-  const { a: c, b: d } = q;
-
-  const ac = a * c;
-  const ad = a * d;
-  const bc = b * c;
-  const bd = b * d;
-
-  return {
-    varName,
-    a, b, c, d,
-    ac, ad, bc, bd,
-    A: ac,
-    B: ad + bc,
-    C: bd,
-    expanded: polyToString(ac, ad + bc, bd, varName),
-  };
+function HeroSection() {
+  return (
+    <header className="hero">
+      <p className="eyebrow">Math Lab</p>
+      <h1>FOIL Binomial Multiplication</h1>
+      <p className="subhead">
+        Multiply two binomials step by step using the area model.
+        Watch each FOIL product appear as a colored rectangle.
+      </p>
+    </header>
+  );
 }
 
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+function InputBar({ bin1, bin2, onBin1Change, onBin2Change, onPreset }) {
+  return (
+    <div className="input-bar">
+      <div className="input-row">
+        <input
+          type="text"
+          value={bin1}
+          onChange={(e) => onBin1Change(e.target.value)}
+          placeholder="(x + 3)"
+          aria-label="First binomial"
+        />
+        <span className="times">&times;</span>
+        <input
+          type="text"
+          value={bin2}
+          onChange={(e) => onBin2Change(e.target.value)}
+          placeholder="(2x - 5)"
+          aria-label="Second binomial"
+        />
+      </div>
+      <div className="presets">
+        {PRESETS.map((p, i) => (
+          <button
+            key={i}
+            className="preset-btn"
+            onClick={() => onPreset(p.bin1, p.bin2)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function svgToString(svgEl) {
-  const clone = svgEl.cloneNode(true);
-
-  const vb = clone.getAttribute("viewBox") || `0 0 ${VIEWPORT.w} ${VIEWPORT.h}`;
-  const [, , w, h] = vb.split(/\s+/).map(Number);
-  const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  bg.setAttribute("x", "0");
-  bg.setAttribute("y", "0");
-  bg.setAttribute("width", String(w || VIEWPORT.w));
-  bg.setAttribute("height", String(h || VIEWPORT.h));
-  bg.setAttribute("fill", "rgba(0,0,0,0)");
-  clone.insertBefore(bg, clone.firstChild);
-
-  if (!clone.getAttribute("xmlns")) clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  if (!clone.getAttribute("xmlns:xlink")) clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-
-  const serializer = new XMLSerializer();
-  const str = serializer.serializeToString(clone);
-  return `<?xml version="1.0" encoding="UTF-8"?>\n${str}`;
+function StepNav({ step, onStep }) {
+  return (
+    <div className="step-nav">
+      <button
+        className="nav-btn"
+        disabled={step <= 0}
+        onClick={() => onStep(step - 1)}
+        aria-label="Previous step"
+      >
+        &larr; Back
+      </button>
+      <div className="step-dots">
+        {Array.from({ length: MAX_STEP + 1 }, (_, i) => (
+          <button
+            key={i}
+            className={`step-dot${i === step ? " active" : i < step ? " completed" : ""}`}
+            onClick={() => onStep(i)}
+            aria-label={`Go to step ${i + 1}`}
+          />
+        ))}
+      </div>
+      <button
+        className="nav-btn"
+        disabled={step >= MAX_STEP}
+        onClick={() => onStep(step + 1)}
+        aria-label="Next step"
+      >
+        Next &rarr;
+      </button>
+    </div>
+  );
 }
 
-async function exportSvg(svgEl, filename) {
-  const svgStr = svgToString(svgEl);
-  const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
-  downloadBlob(blob, filename);
+function ExplanationPanel({ content }) {
+  if (!content) return null;
+  return (
+    <div className="explanation-card">
+      <div className="step-label">{content.label}</div>
+      <h3>{content.heading}</h3>
+      <p>{content.body}</p>
+      {content.math && (
+        <div className="math-display">{content.math}</div>
+      )}
+      {content.foilLegend && (
+        <div className="foil-legend">
+          <span><span className="legend-swatch" style={{ background: "var(--q1-solid)" }} /> First</span>
+          <span><span className="legend-swatch" style={{ background: "var(--q2-solid)" }} /> Outer</span>
+          <span><span className="legend-swatch" style={{ background: "var(--q3-solid)" }} /> Inner</span>
+          <span><span className="legend-swatch" style={{ background: "var(--q4-solid)" }} /> Last</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
-async function exportPng(svgEl, filename, scale = 2) {
-  const svgStr = svgToString(svgEl);
-  const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(svgBlob);
+function ResultCard({ model }) {
+  return (
+    <div className="result-card">
+      <h3>Final Answer</h3>
+      <div className="result-equation">
+        <PolyDisplay A={model.A} B={model.B} C={model.C} varName={model.varName} />
+      </div>
+    </div>
+  );
+}
 
-  try {
-    const img = new Image();
-    img.decoding = "async";
-
-    const vb = svgEl.getAttribute("viewBox") || `0 0 ${VIEWPORT.w} ${VIEWPORT.h}`;
-    const [, , w, h] = vb.split(/\s+/).map(Number);
-    const width = (w || VIEWPORT.w) * scale;
-    const height = (h || VIEWPORT.h) * scale;
-
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = url;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-
-    ctx.fillStyle = "#0b1020";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
-
-    const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-    downloadBlob(pngBlob, filename);
-  } finally {
-    URL.revokeObjectURL(url);
+function ExportFooter({ svgRef, model, bin1, bin2 }) {
+  async function onExportSvg() {
+    if (!svgRef.current || !model) return;
+    const name = `foil_${bin1.replace(/\s+/g, "")}_x_${bin2.replace(/\s+/g, "")}.svg`
+      .replace(/[^\w\-\.\(\)\+]+/g, "_");
+    await exportSvg(svgRef.current, name);
   }
+  async function onExportPng() {
+    if (!svgRef.current || !model) return;
+    const name = `foil_${bin1.replace(/\s+/g, "")}_x_${bin2.replace(/\s+/g, "")}.png`
+      .replace(/[^\w\-\.\(\)\+]+/g, "_");
+    await exportPng(svgRef.current, name, 2);
+  }
+  return (
+    <div className="export-footer">
+      <button onClick={onExportSvg} disabled={!model}>Export SVG</button>
+      <button onClick={onExportPng} disabled={!model}>Export PNG</button>
+    </div>
+  );
 }
+
+/* ─── Area Model SVG ─── */
 
 function AreaModelSvg({ model, step, svgRef }) {
   const wA = absNonNeg(model.a);
@@ -279,35 +462,37 @@ function AreaModelSvg({ model, step, svgRef }) {
   });
 
   const v = model.varName;
+
+  // FOIL order: First (ac)=q1, Outer (ad)=q2, Inner (bc)=q3, Last (bd)=q4
   const rects = [
-    { key: "ac", x: x0,        y: y0,        w: pxA, h: pxC, className: "q1", label: `(${fmtLinearTerm(model.a, v)})(${fmtLinearTerm(model.c, v)})`, value: model.ac, show: showFills },
-    { key: "bc", x: x0 + pxA,  y: y0,        w: pxB, h: pxC, className: "q2", label: `(${fmtNumber(model.b)})(${fmtLinearTerm(model.c, v)})`,       value: model.bc, show: showFills },
-    { key: "ad", x: x0,        y: y0 + pxC,  w: pxA, h: pxD, className: "q3", label: `(${fmtLinearTerm(model.a, v)})(${fmtNumber(model.d)})`,       value: model.ad, show: showFills },
-    { key: "bd", x: x0 + pxA,  y: y0 + pxC,  w: pxB, h: pxD, className: "q4", label: `(${fmtNumber(model.b)})(${fmtNumber(model.d)})`,             value: model.bd, show: showFills },
+    { key: "ac", x: x0,       y: y0,       w: pxA, h: pxC, cls: "q1", label: `(${fmtLinearTerm(model.a, v)})(${fmtLinearTerm(model.c, v)})`, value: model.ac, show: showFills },
+    { key: "bc", x: x0 + pxA, y: y0,       w: pxB, h: pxC, cls: "q3", label: `(${fmtNumber(model.b)})(${fmtLinearTerm(model.c, v)})`,       value: model.bc, show: showFills },
+    { key: "ad", x: x0,       y: y0 + pxC, w: pxA, h: pxD, cls: "q2", label: `(${fmtLinearTerm(model.a, v)})(${fmtNumber(model.d)})`,       value: model.ad, show: showFills },
+    { key: "bd", x: x0 + pxA, y: y0 + pxC, w: pxB, h: pxD, cls: "q4", label: `(${fmtNumber(model.b)})(${fmtNumber(model.d)})`,             value: model.bd, show: showFills },
   ];
 
   function centerLabel(r) {
     const cx = r.x + r.w / 2;
     const cy = r.y + r.h / 2;
-    const fontSize = Math.max(12, Math.min(18, Math.min(r.w, r.h) / 6));
+    const fontSize = Math.max(14, Math.min(22, Math.min(r.w, r.h) / 5));
     const val = fmtNumber(r.value);
 
-    if (r.w < 8 || r.h < 8) return null;
+    if (r.w < 10 || r.h < 10) return null;
 
     return (
       <g style={fade(showBlockLabels)}>
-        <text x={cx} y={cy - 6} textAnchor="middle" fontSize={fontSize} fill="rgba(232,236,255,0.95)">
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize={fontSize} fontFamily={SVG_MONO} fontWeight="700" fill="rgba(11, 13, 23, 0.85)">
           {val}
         </text>
-        <text x={cx} y={cy + 14} textAnchor="middle" fontSize={Math.max(11, fontSize - 4)} fill="rgba(170,179,218,0.95)">
+        <text x={cx} y={cy + 16} textAnchor="middle" fontSize={Math.max(12, fontSize - 4)} fontFamily={SVG_FONT} fill="rgba(11, 13, 23, 0.50)">
           {r.label}
         </text>
       </g>
     );
   }
 
-  const topY = y0 - 18;
-  const leftX = x0 - 18;
+  const topY = y0 - 20;
+  const leftX = x0 - 20;
   const hasNeg = model.a < 0 || model.b < 0 || model.c < 0 || model.d < 0;
   const hasZero = wA === 0 || wB === 0 || hC === 0 || hD === 0;
 
@@ -318,8 +503,8 @@ function AreaModelSvg({ model, step, svgRef }) {
       <g style={fade(showOutline)}>
         <rect
           x={x0} y={y0} width={W} height={H}
-          fill="rgba(255,255,255,0.02)"
-          stroke="rgba(255,255,255,0.30)"
+          fill="rgba(15, 23, 42, 0.02)"
+          stroke="rgba(15, 23, 42, 0.20)"
           strokeWidth="2"
           rx="12"
         />
@@ -330,30 +515,29 @@ function AreaModelSvg({ model, step, svgRef }) {
           <rect
             x={r.x} y={r.y}
             width={Math.max(0, r.w)} height={Math.max(0, r.h)}
-            fill={`var(--${r.className})`}
-            stroke="rgba(255,255,255,0.18)"
+            fill={`var(--${r.cls})`}
+            stroke="rgba(15, 23, 42, 0.12)"
             strokeWidth="1"
           />
         </g>
       ))}
 
       <g style={fade(showPartitions)}>
-        <line x1={x0 + pxA} y1={y0} x2={x0 + pxA} y2={y0 + H} stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
-        <line x1={x0} y1={y0 + pxC} x2={x0 + W} y2={y0 + pxC} stroke="rgba(255,255,255,0.35)" strokeWidth="2" />
+        <line x1={x0 + pxA} y1={y0} x2={x0 + pxA} y2={y0 + H} stroke="rgba(15, 23, 42, 0.25)" strokeWidth="2" />
+        <line x1={x0} y1={y0 + pxC} x2={x0 + W} y2={y0 + pxC} stroke="rgba(15, 23, 42, 0.25)" strokeWidth="2" />
       </g>
 
       <g style={fade(showEdgeLabels)}>
-        <text x={x0 + pxA / 2} y={topY} textAnchor="middle" fontSize="14" fill="rgba(170,179,218,0.95)">
+        <text x={x0 + pxA / 2} y={topY} textAnchor="middle" fontSize="16" fontWeight="600" fill="rgba(11, 13, 23, 0.75)">
           {fmtLinearTerm(model.a, v)}
         </text>
-        <text x={x0 + pxA + pxB / 2} y={topY} textAnchor="middle" fontSize="14" fill="rgba(170,179,218,0.95)">
+        <text x={x0 + pxA + pxB / 2} y={topY} textAnchor="middle" fontSize="16" fontWeight="600" fill="rgba(11, 13, 23, 0.75)">
           {fmtNumber(model.b)}
         </text>
-
-        <text x={leftX} y={y0 + pxC / 2} textAnchor="end" dominantBaseline="middle" fontSize="14" fill="rgba(170,179,218,0.95)">
+        <text x={leftX} y={y0 + pxC / 2} textAnchor="end" dominantBaseline="middle" fontSize="16" fontWeight="600" fill="rgba(11, 13, 23, 0.75)">
           {fmtLinearTerm(model.c, v)}
         </text>
-        <text x={leftX} y={y0 + pxC + pxD / 2} textAnchor="end" dominantBaseline="middle" fontSize="14" fill="rgba(170,179,218,0.95)">
+        <text x={leftX} y={y0 + pxC + pxD / 2} textAnchor="end" dominantBaseline="middle" fontSize="16" fontWeight="600" fill="rgba(11, 13, 23, 0.75)">
           {fmtNumber(model.d)}
         </text>
       </g>
@@ -363,18 +547,18 @@ function AreaModelSvg({ model, step, svgRef }) {
       ))}
 
       <g style={fade(showCombineHint)}>
-        <text x={x0 + W / 2} y={y0 + H + 36} textAnchor="middle" fontSize="14" fill="rgba(232,236,255,0.92)">
-          Combine like terms: ({fmtNumber(model.ad)} + {fmtNumber(model.bc)}){v} = {fmtNumber(model.B)}{v}
+        <text x={x0 + W / 2} y={y0 + H + 40} textAnchor="middle" fontSize="15" fontFamily={SVG_MONO} fill="rgba(11, 13, 23, 0.70)">
+          Combine: ({fmtNumber(model.ad)} + {fmtNumber(model.bc)}){v} = {fmtNumber(model.B)}{v}
         </text>
       </g>
 
       {hasNeg && (
-        <text x={x0} y={y0 + H + 62} textAnchor="start" fontSize="12" fill="rgba(255,199,0,0.9)">
-          Note: geometry uses |coefficients| for drawing (signs still shown in algebra).
+        <text x={x0} y={y0 + H + 68} textAnchor="start" fontSize="12" fill="rgba(210, 71, 32, 0.8)">
+          Note: geometry uses |coefficients| for drawing; signs are shown in the algebra.
         </text>
       )}
       {hasZero && (
-        <text x={x0} y={y0 + H + (hasNeg ? 80 : 62)} textAnchor="start" fontSize="12" fill="rgba(255,199,0,0.9)">
+        <text x={x0} y={y0 + H + (hasNeg ? 86 : 68)} textAnchor="start" fontSize="12" fill="rgba(210, 71, 32, 0.8)">
           Note: a zero coefficient collapses one dimension of the area model.
         </text>
       )}
@@ -382,25 +566,22 @@ function AreaModelSvg({ model, step, svgRef }) {
   );
 }
 
+/* ─── App Root ─── */
+
 function App() {
   const [bin1, setBin1] = useState("(x+3)");
   const [bin2, setBin2] = useState("(2x-5)");
-
   const [step, setStep] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [speedMs, setSpeedMs] = useState(900);
-
-  const timerRef = useRef(null);
   const svgRef = useRef(null);
 
   const parsed1 = useMemo(() => parseLinearBinomial(bin1), [bin1]);
   const parsed2 = useMemo(() => parseLinearBinomial(bin2), [bin2]);
 
   const parseError = useMemo(() => {
-    if (!parsed1.ok) return `Left binomial: ${parsed1.error}`;
-    if (!parsed2.ok) return `Right binomial: ${parsed2.error}`;
+    if (!parsed1.ok) return `First binomial: ${parsed1.error}`;
+    if (!parsed2.ok) return `Second binomial: ${parsed2.error}`;
     if (parsed1.ok && parsed2.ok && parsed1.varName !== parsed2.varName) {
-      return `Variables must match. Left uses "${parsed1.varName}", right uses "${parsed2.varName}".`;
+      return `Variables must match. First uses \u201c${parsed1.varName}\u201d, second uses \u201c${parsed2.varName}\u201d.`;
     }
     return null;
   }, [parsed1, parsed2]);
@@ -410,181 +591,57 @@ function App() {
     return computeFoil(parsed1, parsed2);
   }, [parsed1, parsed2, parseError]);
 
-  useEffect(() => {
-    if (!playing) return;
-    if (parseError) return;
-
-    timerRef.current = setInterval(() => {
-      setStep((s) => {
-        if (s >= MAX_STEP) return MAX_STEP;
-        const next = s + 1;
-        if (next >= MAX_STEP) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-          setPlaying(false);
-        }
-        return next;
-      });
-    }, speedMs);
-
-    return () => {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [playing, speedMs, parseError]);
-
-  function resetAll() {
-    setBin1("(x+3)");
-    setBin2("(2x-5)");
-    setStep(0);
-    setPlaying(false);
-    setSpeedMs(900);
-  }
-
   function safeSetStep(next) {
     setStep(Math.max(0, Math.min(MAX_STEP, next)));
   }
 
-  const stepsText = [
-    "1) Draw the outer rectangle (total product).",
-    "2) Add partitions (split into 4 products).",
-    "3) Label side lengths (terms of each binomial).",
-    "4) Fill the 4 sub-rectangles (FOIL areas).",
-    "5) Label each area with its product.",
-    "6) Combine like terms into the final polynomial.",
-  ];
-
-  const exportDisabled = !model;
-
-  async function onExportSvg() {
-    if (!svgRef.current || !model) return;
-    const name = `area-model_${bin1.replace(/\s+/g, "")}__${bin2.replace(/\s+/g, "")}.svg`
-      .replace(/[^\w\-\.\(\)\+]+/g, "_");
-    await exportSvg(svgRef.current, name);
+  function handlePreset(b1, b2) {
+    setBin1(b1);
+    setBin2(b2);
+    setStep(0);
   }
 
-  async function onExportPng() {
-    if (!svgRef.current || !model) return;
-    const name = `area-model_${bin1.replace(/\s+/g, "")}__${bin2.replace(/\s+/g, "")}.png`
-      .replace(/[^\w\-\.\(\)\+]+/g, "_");
-    await exportPng(svgRef.current, name, 2);
-  }
+  const stepContent = model ? getStepContent(step, model) : null;
 
   return (
-    <div className="wrap">
-      <div className="card">
-        <h1>Symbolic binomials</h1>
+    <div className="page">
+      <HeroSection />
 
-        <label>
-          Left binomial (linear)
-          <input
-            type="text"
-            value={bin1}
-            onChange={(e) => { setBin1(e.target.value); setStep(0); setPlaying(false); }}
-            placeholder="(x+3)"
-          />
-        </label>
+      <InputBar
+        bin1={bin1}
+        bin2={bin2}
+        onBin1Change={(v) => { setBin1(v); setStep(0); }}
+        onBin2Change={(v) => { setBin2(v); setStep(0); }}
+        onPreset={handlePreset}
+      />
 
-        <label>
-          Right binomial (linear)
-          <input
-            type="text"
-            value={bin2}
-            onChange={(e) => { setBin2(e.target.value); setStep(0); setPlaying(false); }}
-            placeholder="(2x-5)"
-          />
-        </label>
+      {parseError && <div className="error-banner">{parseError}</div>}
 
-        <div className="row2">
-          <span className="pill">Step: {step + 1} / {MAX_STEP + 1}</span>
-          <span className="pill">Speed: {speedMs}ms</span>
-        </div>
-
-        <div className="sliderRow">
-          <input
-            type="range"
-            min="250"
-            max="2000"
-            step="50"
-            value={speedMs}
-            onChange={(e) => setSpeedMs(Number(e.target.value))}
-            aria-label="Animation speed"
-          />
-          <span className="pill">{speedMs}ms</span>
-        </div>
-
-        <div className="btnRow">
-          <button disabled={!!parseError} onClick={() => setPlaying(p => !p)}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button disabled={step <= 0} onClick={() => { setPlaying(false); safeSetStep(step - 1); }}>
-            Back
-          </button>
-          <button disabled={step >= MAX_STEP || !!parseError} onClick={() => { setPlaying(false); safeSetStep(step + 1); }}>
-            Next
-          </button>
-          <button onClick={() => { setPlaying(false); safeSetStep(0); }}>
-            Reset animation
-          </button>
-          <button onClick={resetAll}>Reset all</button>
-        </div>
-
-        {parseError ? (
-          <div className="danger">{parseError}</div>
-        ) : (
-          <div className="math">
-            <div><strong>Parsed:</strong></div>
-            <div>Left: {fmtNumber(model.a)}{model.varName} {fmtSigned(model.b)}</div>
-            <div>Right: {fmtNumber(model.c)}{model.varName} {fmtSigned(model.d)}</div>
-
-            <div style={{ marginTop: 10 }}><strong>FOIL areas:</strong></div>
-            <div>ac: {fmtNumber(model.ac)}{model.varName}²</div>
-            <div>ad: {fmtNumber(model.ad)}{model.varName}</div>
-            <div>bc: {fmtNumber(model.bc)}{model.varName}</div>
-            <div>bd: {fmtNumber(model.bd)}</div>
-
-            <div style={{ marginTop: 10 }}><strong>Simplified:</strong></div>
-            <PolyDisplay A={model.A} B={model.B} C={model.C} varName={model.varName} />
-          </div>
-        )}
-
-        <div className="small">
-          Animation script:
-          <div style={{ marginTop: 6 }}>
-            {stepsText.map((t, i) => (
-              <div key={i} style={{ opacity: i <= step ? 1 : 0.45 }}>{t}</div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h1>Graphical (Area Model + Animation)</h1>
-
-        <div className="btnRow" style={{ marginTop: 0, marginBottom: 10 }}>
-          <button disabled={exportDisabled} onClick={onExportSvg}>Export SVG</button>
-          <button disabled={exportDisabled} onClick={onExportPng}>Export PNG</button>
-        </div>
-
-        <div className="svgWrap">
-          {model ? <AreaModelSvg model={model} step={step} svgRef={svgRef} /> : (
-            <div style={{ color: "var(--muted)", padding: 16 }}>
-              Enter valid linear binomials to see the diagram.
+      {model ? (
+        <>
+          <div className="diagram-card">
+            <div className="svg-container">
+              <AreaModelSvg model={model} step={step} svgRef={svgRef} />
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="legend">
-          <span className="pill"><span className="dot q1"></span> ac ({model ? model.varName : "x"}²)</span>
-          <span className="pill"><span className="dot q2"></span> bc ({model ? model.varName : "x"})</span>
-          <span className="pill"><span className="dot q3"></span> ad ({model ? model.varName : "x"})</span>
-          <span className="pill"><span className="dot q4"></span> bd (const)</span>
-        </div>
+          <StepNav step={step} onStep={safeSetStep} />
 
-        <div className="small">
-          Try: <code>(x-7)(x+2)</code>, <code>(-x+3)(4x-1)</code>, <code>(2x)(x-5)</code>, <code>(3)(x+9)</code>
-        </div>
-      </div>
+          <ExplanationPanel content={stepContent} />
+
+          {step >= MAX_STEP && <ResultCard model={model} />}
+
+          <ExportFooter svgRef={svgRef} model={model} bin1={bin1} bin2={bin2} />
+        </>
+      ) : (
+        !parseError && (
+          <div className="diagram-card">
+            <div className="no-diagram">
+              Enter two binomials above to see the area model.
+            </div>
+          </div>
+        )
+      )}
     </div>
   );
 }
