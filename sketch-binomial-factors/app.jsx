@@ -240,19 +240,54 @@ function getStepContent(step, model) {
       label: "Step 4 of 6",
       heading: "Fill the Four Areas (FOIL)",
       body: `Each small rectangle\u2019s area equals its width \u00d7 height:`,
-      math: `First:  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.ac)}${v}\u00b2\nOuter:  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.ad)}${v}\nInner:  ${fmtNumber(model.b)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.bc)}${v}\nLast:  ${fmtNumber(model.b)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.bd)}`,
+      math: (
+        <>
+          <div className="foil-line" style={{ color: "var(--q1-solid)" }}>
+            <strong>First:</strong>{`  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.ac)}${v}\u00b2`}
+          </div>
+          <div className="foil-line" style={{ color: "var(--q2-solid)" }}>
+            <strong>Outer:</strong>{`  ${fmtLinearTerm(model.a, v)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.ad)}${v}`}
+          </div>
+          <div className="foil-line" style={{ color: "var(--q3-solid)" }}>
+            <strong>Inner:</strong>{`  ${fmtNumber(model.b)} \u00d7 ${fmtLinearTerm(model.c, v)}  =  ${fmtNumber(model.bc)}${v}`}
+          </div>
+          <div className="foil-line" style={{ color: "var(--q4-solid)" }}>
+            <strong>Last:</strong>{`  ${fmtNumber(model.b)} \u00d7 ${fmtNumber(model.d)}  =  ${fmtNumber(model.bd)}`}
+          </div>
+        </>
+      ),
       foilLegend: true,
     },
     {
       label: "Step 5 of 6",
       heading: "Read the Products",
       body: `Each sub-rectangle is now labeled with its value. Notice that the Outer (${fmtNumber(model.ad)}${v}) and Inner (${fmtNumber(model.bc)}${v}) terms are \u201clike terms\u201d \u2014 they both contain ${v} to the first power.`,
-      math: `${fmtNumber(model.ac)}${v}\u00b2  +  ${fmtNumber(model.ad)}${v}  +  ${fmtNumber(model.bc)}${v}  +  ${fmtNumber(model.bd)}`,
+      math: (
+        <>
+          <span style={{ color: "var(--q1-solid)", fontWeight: 700 }}>{fmtNumber(model.ac)}{v}\u00b2</span>
+          {"  +  "}
+          <span style={{ color: "var(--q2-solid)", fontWeight: 700 }}>{fmtNumber(model.ad)}{v}</span>
+          {"  +  "}
+          <span style={{ color: "var(--q3-solid)", fontWeight: 700 }}>{fmtNumber(model.bc)}{v}</span>
+          {"  +  "}
+          <span style={{ color: "var(--q4-solid)", fontWeight: 700 }}>{fmtNumber(model.bd)}</span>
+        </>
+      ),
+      foilLegend: true,
     },
     {
       label: "Step 6 of 6",
       heading: "Combine Like Terms",
       body: `Add the Outer and Inner terms: ${fmtNumber(model.ad)}${v} + ${fmtNumber(model.bc)}${v} = ${fmtNumber(model.B)}${v}. This gives us the final answer!`,
+      math: (
+        <>
+          <span style={{ color: "var(--q2-solid)" }}>{fmtNumber(model.ad)}{v}</span>
+          {" + "}
+          <span style={{ color: "var(--q3-solid)" }}>{fmtNumber(model.bc)}{v}</span>
+          {" = "}
+          <strong>{fmtNumber(model.B)}{v}</strong>
+        </>
+      ),
       isFinal: true,
     },
   ][step] || null;
@@ -388,13 +423,27 @@ function ExplanationPanel({ content }) {
   );
 }
 
-function ResultCard({ model }) {
+function ResultCard({ model, bin1, bin2 }) {
+  const [copied, setCopied] = useState(false);
+  const equationText = polyToString(model.A, model.B, model.C, model.varName);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(`${bin1} \u00d7 ${bin2} = ${equationText}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }
+
   return (
     <div className="result-card">
+      <div className="result-input">{bin1} &times; {bin2}</div>
       <h3>Final Answer</h3>
       <div className="result-equation">
         <PolyDisplay A={model.A} B={model.B} C={model.C} varName={model.varName} />
       </div>
+      <button className="copy-btn" onClick={handleCopy}>
+        {copied ? "Copied!" : "Copy equation"}
+      </button>
     </div>
   );
 }
@@ -627,9 +676,9 @@ function App() {
 
           <StepNav step={step} onStep={safeSetStep} />
 
-          <ExplanationPanel content={stepContent} />
+          <ExplanationPanel key={step} content={stepContent} />
 
-          {step >= MAX_STEP && <ResultCard model={model} />}
+          {step >= MAX_STEP && <ResultCard model={model} bin1={bin1} bin2={bin2} />}
 
           <ExportFooter svgRef={svgRef} model={model} bin1={bin1} bin2={bin2} />
         </>

@@ -253,12 +253,18 @@ h1 {
 
 /* ─── Explanation Panel ─── */
 
+@keyframes explainFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .explanation-card {
   background: var(--panel);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 24px 28px;
   margin-bottom: 24px;
+  animation: explainFadeIn 0.3s ease;
 }
 
 .step-label {
@@ -296,6 +302,11 @@ h1 {
   margin: 12px 0 0;
   white-space: pre-line;
   line-height: 1.8;
+}
+
+.foil-line {
+  padding: 3px 0;
+  font-weight: 600;
 }
 
 .foil-legend {
@@ -344,6 +355,32 @@ h1 {
 
 .result-equation sup {
   font-size: 0.7em;
+}
+
+.result-input {
+  font-family: var(--mono);
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.copy-btn {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 18px;
+  font-size: 0.82rem;
+  font-family: var(--sans);
+  font-weight: 500;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  color: var(--ink);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 /* ─── Export Footer ─── */
