@@ -689,6 +689,7 @@ function HamburgerMenu() {
           <a href="../discriminant-visualizer/" className="menu-link indent">Discriminant</a>
           <a href="../completing-the-square/" className="menu-link indent active">Completing the Square</a>
           <a href="../sketch-binomial-factors/" className="menu-link indent">Binomial Multiplication</a>
+          <a href="../quadratic-form-converter/" className="menu-link indent">Form Converter</a>
         </div>
 
         <div className="menu-divider"></div>

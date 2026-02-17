@@ -9,7 +9,7 @@ maths/
 ├── index.html                          # Main hub page
 ├── algebra/
 │   ├── index.html                     # Algebra hub
-│   └── quadratics/                    # Quadratics topic (7 tools)
+│   └── quadratics/                    # Quadratics topic (8 tools)
 ├── geometry/                           # Coming soon
 └── calculus/                           # Coming soon
 ```
@@ -114,6 +114,20 @@ Step-by-step visualization of binomial multiplication using the FOIL method and 
 - Diagram labels showing factor terms and numeric products
 - Combine like terms into the final polynomial
 - Copy equation to clipboard, export diagram as SVG or PNG
+
+**Stack:** React 18, Babel standalone, SVG
+
+##### [Quadratic Form Converter](algebra/quadratics/quadratic-form-converter/)
+
+Convert between standard form, vertex form, and factored form with comprehensive step-by-step algebraic work.
+
+- Three input modes: standard (ax² + bx + c), vertex (a(x−h)² + k), factored (a(x−r₁)(x−r₂))
+- Six conversion pathways with detailed step-by-step explanations
+- Visual parabola graph showing equivalence between forms
+- Auto-detects when no real roots exist (discriminant < 0)
+- Five presets demonstrating different forms and conversions
+- Copy result equation, export graph as SVG or PNG
+- URL parameters for sharing specific conversions
 
 **Stack:** React 18, Babel standalone, SVG
 

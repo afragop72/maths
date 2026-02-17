@@ -264,8 +264,11 @@ function HamburgerMenu() {
             <li><a href="../quadratic-equation/">Graph Studio</a></li>
             <li><a href="../quadratic-inequality/">Inequality Solver</a></li>
             <li><a href="../quadratic-inequality-region/">Inequality Regions</a></li>
+            <li><a href="../parabola-transformations/">Transformations</a></li>
+            <li><a href="../discriminant-visualizer/">Discriminant</a></li>
             <li><a href="../completing-the-square/">Completing the Square</a></li>
             <li><a href="../sketch-binomial-factors/">Binomial Multiplication</a></li>
+            <li><a href="../quadratic-form-converter/">Form Converter</a></li>
           </ul>
         </div>
         <div className="menu-section">
