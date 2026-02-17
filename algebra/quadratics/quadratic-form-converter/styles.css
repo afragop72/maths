@@ -616,6 +616,28 @@ h1 {
   margin: 20px 0;
 }
 
+/* ─── Fractions ─── */
+
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 3px;
+  line-height: 1.15;
+  font-size: 0.88em;
+  text-align: center;
+}
+
+.frac-num {
+  padding: 0 2px 2px;
+  border-bottom: 1.5px solid currentColor;
+}
+
+.frac-den {
+  padding: 2px 2px 0;
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 1024px) {

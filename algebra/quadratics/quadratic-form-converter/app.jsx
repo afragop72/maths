@@ -25,10 +25,80 @@ const PRESETS = [
 // Math Utilities
 // ─────────────────────────────────────────────────────────────
 
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) { [a, b] = [b, a % b]; }
+  return a || 1;
+}
+
+function toFraction(decimal, maxDenominator = 10000) {
+  if (!isFinite(decimal)) return { n: decimal, d: 1, isDecimal: true };
+  if (Number.isInteger(decimal)) return { n: decimal, d: 1, isDecimal: false };
+
+  const sign = decimal < 0 ? -1 : 1;
+  decimal = Math.abs(decimal);
+
+  // Try to find a fraction using continued fractions method
+  let a = 0, b = 1, c = 1, d = 0;
+  let n = decimal;
+
+  for (let i = 0; i < 50; i++) {
+    const digit = Math.floor(n);
+    const num = a + digit * c;
+    const den = b + digit * d;
+
+    if (den > maxDenominator) break;
+
+    a = c; b = d; c = num; d = den;
+
+    if (Math.abs(decimal - num / den) < 1e-10) {
+      const g = gcd(num, den);
+      return { n: sign * (num / g), d: den / g, isDecimal: false };
+    }
+
+    if (Math.abs(n - digit) < 1e-10) break;
+    n = 1 / (n - digit);
+  }
+
+  // If no good fraction found, return decimal
+  return { n: sign * decimal, d: 1, isDecimal: true };
+}
+
 function fmtNumber(n) {
   if (!isFinite(n)) return '∞';
   const rounded = Math.round(n * 1000) / 1000;
   return rounded.toString();
+}
+
+// Fraction component for JSX rendering
+function Frac({ n, d }) {
+  return (
+    <span className="frac">
+      <span className="frac-num">{n}</span>
+      <span className="frac-den">{d}</span>
+    </span>
+  );
+}
+
+// Format number as fraction (returns JSX or string)
+function fmtFrac(n) {
+  const frac = toFraction(n);
+  if (frac.isDecimal || frac.d === 1) {
+    return fmtNumber(n);
+  }
+  const sign = frac.n < 0 ? '−' : '';
+  return <>{sign}<Frac n={Math.abs(frac.n)} d={frac.d} /></>;
+}
+
+// Format number with sign for addition
+function fmtFracSigned(n) {
+  const frac = toFraction(n);
+  const sign = n >= 0 ? ' + ' : ' − ';
+  if (frac.isDecimal || frac.d === 1) {
+    return `${sign}${fmtNumber(Math.abs(n))}`;
+  }
+  return <>{sign}<Frac n={Math.abs(frac.n)} d={frac.d} /></>;
 }
 
 function fmtSigned(n) {
@@ -102,83 +172,154 @@ function factoredToVertex(a, r1, r2) {
   return { a, h, k };
 }
 
-// Format each form as a string
+// Format each form (returns JSX for fractions)
 function formatStandard(a, b, c) {
-  let result = '';
+  const parts = [];
 
   // a term
-  if (a === 1) result = 'x²';
-  else if (a === -1) result = '−x²';
-  else result = `${fmtNumber(a)}x²`;
+  const aFrac = toFraction(a);
+  if (a === 1) {
+    parts.push('x²');
+  } else if (a === -1) {
+    parts.push('−x²');
+  } else if (aFrac.d === 1 || aFrac.isDecimal) {
+    parts.push(`${fmtNumber(a)}x²`);
+  } else {
+    parts.push(<>{fmtFrac(a)}x²</>);
+  }
 
   // b term
   if (b !== 0) {
     const sign = b >= 0 ? ' + ' : ' − ';
     const absB = Math.abs(b);
-    if (absB === 1) result += `${sign}x`;
-    else result += `${sign}${fmtNumber(absB)}x`;
+    const bFrac = toFraction(absB);
+
+    if (absB === 1) {
+      parts.push(`${sign}x`);
+    } else if (bFrac.d === 1 || bFrac.isDecimal) {
+      parts.push(`${sign}${fmtNumber(absB)}x`);
+    } else {
+      parts.push(<>{sign}<Frac n={bFrac.n} d={bFrac.d} />x</>);
+    }
   }
 
   // c term
   if (c !== 0) {
-    result += c >= 0 ? ` + ${fmtNumber(c)}` : ` − ${fmtNumber(Math.abs(c))}`;
+    const sign = c >= 0 ? ' + ' : ' − ';
+    const absC = Math.abs(c);
+    const cFrac = toFraction(absC);
+
+    if (cFrac.d === 1 || cFrac.isDecimal) {
+      parts.push(`${sign}${fmtNumber(absC)}`);
+    } else {
+      parts.push(<>{sign}<Frac n={cFrac.n} d={cFrac.d} /></>);
+    }
   }
 
-  return result || '0';
+  return parts.length > 0 ? <>{parts}</> : '0';
 }
 
 function formatVertex(a, h, k) {
-  let result = '';
+  const parts = [];
 
   // a coefficient
-  if (a === 1) result = '';
-  else if (a === -1) result = '−';
-  else result = `${fmtNumber(a)}`;
+  const aFrac = toFraction(a);
+  if (a === 1) {
+    // no prefix
+  } else if (a === -1) {
+    parts.push('−');
+  } else if (aFrac.d === 1 || aFrac.isDecimal) {
+    parts.push(`${fmtNumber(a)}`);
+  } else {
+    parts.push(fmtFrac(a));
+  }
 
   // (x - h)² term
+  const hFrac = toFraction(Math.abs(h));
   if (h === 0) {
-    result += 'x²';
+    parts.push('x²');
   } else if (h > 0) {
-    result += `(x − ${fmtNumber(h)})²`;
+    if (hFrac.d === 1 || hFrac.isDecimal) {
+      parts.push(`(x − ${fmtNumber(h)})²`);
+    } else {
+      parts.push(<>(x − <Frac n={hFrac.n} d={hFrac.d} />)²</>);
+    }
   } else {
-    result += `(x + ${fmtNumber(Math.abs(h))})²`;
+    if (hFrac.d === 1 || hFrac.isDecimal) {
+      parts.push(`(x + ${fmtNumber(Math.abs(h))})²`);
+    } else {
+      parts.push(<>(x + <Frac n={hFrac.n} d={hFrac.d} />)²</>);
+    }
   }
 
   // k term
   if (k !== 0) {
-    result += k >= 0 ? ` + ${fmtNumber(k)}` : ` − ${fmtNumber(Math.abs(k))}`;
+    const sign = k >= 0 ? ' + ' : ' − ';
+    const absK = Math.abs(k);
+    const kFrac = toFraction(absK);
+
+    if (kFrac.d === 1 || kFrac.isDecimal) {
+      parts.push(`${sign}${fmtNumber(absK)}`);
+    } else {
+      parts.push(<>{sign}<Frac n={kFrac.n} d={kFrac.d} /></>);
+    }
   }
 
-  return result;
+  return <>{parts}</>;
 }
 
 function formatFactored(a, r1, r2) {
-  let result = '';
+  const parts = [];
 
   // a coefficient
-  if (a === 1) result = '';
-  else if (a === -1) result = '−';
-  else result = `${fmtNumber(a)}`;
+  const aFrac = toFraction(a);
+  if (a === 1) {
+    // no prefix
+  } else if (a === -1) {
+    parts.push('−');
+  } else if (aFrac.d === 1 || aFrac.isDecimal) {
+    parts.push(`${fmtNumber(a)}`);
+  } else {
+    parts.push(fmtFrac(a));
+  }
 
   // (x - r1) term
+  const r1Frac = toFraction(Math.abs(r1));
   if (r1 === 0) {
-    result += 'x';
+    parts.push('x');
   } else if (r1 > 0) {
-    result += `(x − ${fmtNumber(r1)})`;
+    if (r1Frac.d === 1 || r1Frac.isDecimal) {
+      parts.push(`(x − ${fmtNumber(r1)})`);
+    } else {
+      parts.push(<>(x − <Frac n={r1Frac.n} d={r1Frac.d} />)</>);
+    }
   } else {
-    result += `(x + ${fmtNumber(Math.abs(r1))})`;
+    if (r1Frac.d === 1 || r1Frac.isDecimal) {
+      parts.push(`(x + ${fmtNumber(Math.abs(r1))})`);
+    } else {
+      parts.push(<>(x + <Frac n={r1Frac.n} d={r1Frac.d} />)</>);
+    }
   }
 
   // (x - r2) term
+  const r2Frac = toFraction(Math.abs(r2));
   if (r2 === 0) {
-    result += '(x)';
+    parts.push('(x)');
   } else if (r2 > 0) {
-    result += `(x − ${fmtNumber(r2)})`;
+    if (r2Frac.d === 1 || r2Frac.isDecimal) {
+      parts.push(`(x − ${fmtNumber(r2)})`);
+    } else {
+      parts.push(<>(x − <Frac n={r2Frac.n} d={r2Frac.d} />)</>);
+    }
   } else {
-    result += `(x + ${fmtNumber(Math.abs(r2))})`;
+    if (r2Frac.d === 1 || r2Frac.isDecimal) {
+      parts.push(`(x + ${fmtNumber(Math.abs(r2))})`);
+    } else {
+      parts.push(<>(x + <Frac n={r2Frac.n} d={r2Frac.d} />)</>);
+    }
   }
 
-  return result;
+  return <>{parts}</>;
 }
 
 // Evaluate quadratic at x
@@ -274,12 +415,12 @@ function standardToVertexSteps({ a, b, c }) {
     {
       number: 'Step 2',
       description: `Find the x-coordinate of the vertex: h = −b/(2a) = −(${fmtNumber(b)})/(2·${fmtNumber(a)})`,
-      math: `h = ${fmtNumber(h)}`
+      math: <>h = {fmtFrac(h)}</>
     },
     {
       number: 'Step 3',
       description: `Find the y-coordinate: k = c − b²/(4a) = ${fmtNumber(c)} − (${fmtNumber(b)})²/(4·${fmtNumber(a)})`,
-      math: `k = ${fmtNumber(k)}`
+      math: <>k = {fmtFrac(k)}</>
     },
     {
       number: 'Step 4',
@@ -318,17 +459,17 @@ function standardToFactoredSteps({ a, b, c }) {
     {
       number: 'Step 2',
       description: `Find the discriminant: Δ = b² − 4ac = (${fmtNumber(b)})² − 4(${fmtNumber(a)})(${fmtNumber(c)})`,
-      math: `Δ = ${fmtNumber(disc)}`
+      math: <>Δ = {fmtFrac(disc)}</>
     },
     {
       number: 'Step 3',
       description: `Apply the quadratic formula: x = (−b ± √Δ) / (2a)`,
-      math: `x = (−${fmtNumber(b)} ± ${fmtNumber(sqrtDisc)}) / ${fmtNumber(2 * a)}`
+      math: <>x = (−{fmtFrac(b)} ± {fmtFrac(sqrtDisc)}) / {fmtFrac(2 * a)}</>
     },
     {
       number: 'Step 4',
       description: `Calculate the two roots:`,
-      math: `r₁ = ${fmtNumber(r1)}, r₂ = ${fmtNumber(r2)}`
+      math: <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
     },
     {
       number: 'Step 5',
@@ -353,12 +494,12 @@ function vertexToStandardSteps({ a, h, k }) {
     {
       number: 'Step 2',
       description: `Expand (x − h)²: (x − ${fmtNumber(h)})² = x² − ${fmtNumber(2 * h)}x + ${fmtNumber(h * h)}`,
-      math: `${a === 1 ? '' : fmtNumber(a)}(x² − ${fmtNumber(2 * h)}x + ${fmtNumber(h * h)}) + ${fmtNumber(k)}`
+      math: <>{a === 1 ? '' : fmtFrac(a)}(x² − {fmtFrac(2 * h)}x + {fmtFrac(h * h)}) + {fmtFrac(k)}</>
     },
     {
       number: 'Step 3',
       description: `Distribute the coefficient ${fmtNumber(a)}:`,
-      math: `${fmtNumber(a)}x² ${fmtSigned(-2 * a * h)}x ${fmtSigned(a * h * h)} ${fmtSigned(k)}`
+      math: <>{fmtFrac(a)}x² {fmtFracSigned(-2 * a * h)}x {fmtFracSigned(a * h * h)} {fmtFracSigned(k)}</>
     },
     {
       number: 'Step 4',
@@ -397,17 +538,17 @@ function vertexToFactoredSteps({ a, h, k }) {
     {
       number: 'Step 2',
       description: `Set equal to zero and solve: a(x − h)² + k = 0`,
-      math: `(x − ${fmtNumber(h)})² = ${fmtNumber(-k / a)}`
+      math: <>(x − {fmtFrac(h)})² = {fmtFrac(-k / a)}</>
     },
     {
       number: 'Step 3',
       description: `Take the square root of both sides:`,
-      math: `x − ${fmtNumber(h)} = ±${fmtNumber(delta)}`
+      math: <>x − {fmtFrac(h)} = ±{fmtFrac(delta)}</>
     },
     {
       number: 'Step 4',
       description: `Solve for x:`,
-      math: `r₁ = ${fmtNumber(r1)}, r₂ = ${fmtNumber(r2)}`
+      math: <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
     },
     {
       number: 'Step 5',
@@ -435,12 +576,12 @@ function factoredToStandardSteps({ a, r1, r2 }) {
     {
       number: 'Step 2',
       description: `Expand (x − r₁)(x − r₂) using FOIL:`,
-      math: `(x − ${fmtNumber(r1)})(x − ${fmtNumber(r2)}) = x² − ${fmtNumber(sum)}x + ${fmtNumber(product)}`
+      math: <>(x − {fmtFrac(r1)})(x − {fmtFrac(r2)}) = x² − {fmtFrac(sum)}x + {fmtFrac(product)}</>
     },
     {
       number: 'Step 3',
       description: `Distribute the coefficient ${fmtNumber(a)}:`,
-      math: `${fmtNumber(a)}(x² − ${fmtNumber(sum)}x + ${fmtNumber(product)})`
+      math: <>{fmtFrac(a)}(x² − {fmtFrac(sum)}x + {fmtFrac(product)})</>
     },
     {
       number: 'Step 4',
@@ -465,12 +606,12 @@ function factoredToVertexSteps({ a, r1, r2 }) {
     {
       number: 'Step 2',
       description: `The vertex x-coordinate is the midpoint of the roots: h = (r₁ + r₂)/2`,
-      math: `h = (${fmtNumber(r1)} + ${fmtNumber(r2)})/2 = ${fmtNumber(h)}`
+      math: <>h = ({fmtFrac(r1)} + {fmtFrac(r2)})/2 = {fmtFrac(h)}</>
     },
     {
       number: 'Step 3',
       description: `The vertex y-coordinate is found by evaluating at x = h:`,
-      math: `k = ${fmtNumber(a)}(${fmtNumber(h)} − ${fmtNumber(r1)})(${fmtNumber(h)} − ${fmtNumber(r2)}) = ${fmtNumber(k)}`
+      math: <>k = {fmtFrac(a)}({fmtFrac(h)} − {fmtFrac(r1)})({fmtFrac(h)} − {fmtFrac(r2)}) = {fmtFrac(k)}</>
     },
     {
       number: 'Step 4',
