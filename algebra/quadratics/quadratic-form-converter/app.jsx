@@ -617,15 +617,25 @@ function standardToFactoredSteps({ a, b, c }) {
               ? <>r₁ = ({fmtFrac(negB)} + √{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}, r₂ = ({fmtFrac(negB)} − √{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}</>
               : <>r₁ = ({fmtFrac(negB)} + {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}, r₂ = ({fmtFrac(negB)} − {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}</>;
           })()
-    },
-    {
-      number: 'Step 5',
-      description: 'Write in factored form: a(x − r₁)(x − r₂)',
-      math: formatFactored(a, r1, r2)
     }
   ];
 
-  return { result: { a, r1, r2 }, steps };
+  // Only add factored form step if roots are rational (perfect square discriminant)
+  if (isPerfect) {
+    steps.push({
+      number: 'Step 5',
+      description: 'Write in factored form: a(x − r₁)(x − r₂)',
+      math: formatFactored(a, r1, r2)
+    });
+  } else {
+    steps.push({
+      number: 'Note',
+      description: 'This quadratic has irrational roots and cannot be factored using rational coefficients. The factored form would require the radical expressions above.',
+      math: ''
+    });
+  }
+
+  return { result: { a, r1, r2, hasIrrationalRoots: !isPerfect }, steps };
 }
 
 function vertexToStandardSteps({ a, h, k }) {
@@ -734,15 +744,25 @@ function vertexToFactoredSteps({ a, h, k }) {
             ? <>r₁ = {fmtFrac(h)} + √{fmtFrac(simplifiedRadical.radical)}, r₂ = {fmtFrac(h)} − √{fmtFrac(simplifiedRadical.radical)}</>
             : <>r₁ = {fmtFrac(h)} + {fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)}, r₂ = {fmtFrac(h)} − {fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)}</>
           : <>r₁ ≈ {fmtNumber(r1)}, r₂ ≈ {fmtNumber(r2)}</>
-    },
-    {
-      number: 'Step 5',
-      description: 'Write in factored form: a(x − r₁)(x − r₂)',
-      math: formatFactored(a, r1, r2)
     }
   ];
 
-  return { result: { a, r1, r2 }, steps };
+  // Only add factored form step if roots are rational
+  if (simplifiedRadical.isPerfect) {
+    steps.push({
+      number: 'Step 5',
+      description: 'Write in factored form: a(x − r₁)(x − r₂)',
+      math: formatFactored(a, r1, r2)
+    });
+  } else {
+    steps.push({
+      number: 'Note',
+      description: 'This quadratic has irrational roots and cannot be factored using rational coefficients. The factored form would require the radical expressions above.',
+      math: ''
+    });
+  }
+
+  return { result: { a, r1, r2, hasIrrationalRoots: !simplifiedRadical.isPerfect }, steps };
 }
 
 function factoredToStandardSteps({ a, r1, r2 }) {
@@ -1403,6 +1423,10 @@ function App() {
     } else if (targetForm === FORMS.VERTEX) {
       return formatVertex(conversion.result.a, conversion.result.h, conversion.result.k);
     } else if (targetForm === FORMS.FACTORED) {
+      // Check if roots are irrational
+      if (conversion.result.hasIrrationalRoots) {
+        return 'Cannot be factored with rational coefficients (see steps for exact roots)';
+      }
       return formatFactored(conversion.result.a, conversion.result.r1, conversion.result.r2);
     }
 
