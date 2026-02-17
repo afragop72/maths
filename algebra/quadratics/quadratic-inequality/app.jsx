@@ -874,6 +874,10 @@ function ParabolaSvg({ a, b, c, ineqType, roots, step, svgRef, solution }) {
     return { lines, labels };
   }, [bounds]);
 
+  // Format inequality and solution text
+  const inequalityText = formatInequality(a, b, c, ineqType);
+  const solutionText = solution.notation || "";
+
   return (
     <svg ref={svgRef} width="100%" viewBox={`0 0 ${GRAPH_VP.w} ${GRAPH_VP.h}`} role="img" aria-label="Parabola graph">
       <defs>
@@ -881,6 +885,18 @@ function ParabolaSvg({ a, b, c, ineqType, roots, step, svgRef, solution }) {
           <rect x={PAD} y={PAD - 10} width={GRAPH_VP.w - PAD * 2} height={GRAPH_VP.h - PAD * 2 + 20} />
         </clipPath>
       </defs>
+
+      {/* Header with inequality and solution */}
+      <g>
+        <text x={GRAPH_VP.w / 2} y={25} textAnchor="middle" fontSize="16"
+          fontFamily={SVG_FONT} fontWeight="600" fill="#0b0d17">
+          {inequalityText}
+        </text>
+        <text x={GRAPH_VP.w / 2} y={45} textAnchor="middle" fontSize="14"
+          fontFamily={SVG_FONT} fontWeight="500" fill="#ff6b3d">
+          Solution: {solutionText}
+        </text>
+      </g>
 
       {/* Grid */}
       <g style={fade(showAxes)}>
@@ -971,17 +987,24 @@ function ParabolaSvg({ a, b, c, ineqType, roots, step, svgRef, solution }) {
       </g>
 
       {/* Test points */}
-      <g style={fade(showTestPoints)} clipPath="url(#plot-area)">
+      <g style={fade(showTestPoints)}>
         {testPoints.map((tp, i) => {
           const val = evaluateQuadratic(a, b, c, tp);
           if (!Number.isFinite(val)) return null;
           const color = val > 0 ? "#10b981" : val < 0 ? "#ef4444" : "#64748b";
           const p = toSvg(tp, val, bounds);
           const clampedY = Math.max(PAD, Math.min(GRAPH_VP.h - PAD, p.y));
+
+          // Position label to avoid overlap with +/- indicators
+          // For positive values (upper region), place label near top of graph
+          // For negative values (lower region), place label near bottom of graph
+          const labelY = val > 0 ? PAD + 15 : GRAPH_VP.h - PAD - 5;
+
           return (
             <g key={i}>
-              <circle cx={p.x} cy={clampedY} r="5" fill={color} stroke="#fff" strokeWidth="2" />
-              <text x={p.x} y={clampedY - 12} textAnchor="middle" fontSize="10"
+              <circle cx={p.x} cy={clampedY} r="5" fill={color} stroke="#fff" strokeWidth="2"
+                clipPath="url(#plot-area)" />
+              <text x={p.x} y={labelY} textAnchor="middle" fontSize="13"
                 fontFamily={SVG_MONO} fontWeight="700" fill={color}>
                 f({fmtNumber(tp)}) = {fmtNumber(val)}
               </text>

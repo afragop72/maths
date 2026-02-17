@@ -9,7 +9,7 @@ maths/
 ├── index.html                          # Main hub page
 ├── algebra/
 │   ├── index.html                     # Algebra hub
-│   └── quadratics/                    # Quadratics topic (4 tools)
+│   └── quadratics/                    # Quadratics topic (5 tools)
 ├── geometry/                           # Coming soon
 └── calculus/                           # Coming soon
 ```
@@ -43,6 +43,19 @@ Solve and graph quadratic inequalities (`ax² + bx + c ⋚ 0`) with a guided vis
 - Number line with interval signs and highlighted solution segments
 - Solution in interval notation, set-builder notation, and plain English
 - Magnify graph in a popup window, export as SVG or PNG
+
+**Stack:** React 18, Babel standalone, SVG
+
+##### [Quadratic Inequality Regions](algebra/quadratics/quadratic-inequality-region/)
+
+Graph two-variable quadratic inequalities (`y ⋚ ax² + bx + c`) and visualize the solution region.
+
+- Enter coefficients and choose inequality type (y <, y ≤, y >, y ≥)
+- Interactive graph with shaded solution region (above or below parabola)
+- Boundary line: dashed for strict inequalities, solid for non-strict
+- Vertex and x-intercept markers with coordinates
+- Pick from five example presets
+- Export graph as SVG or PNG, magnify in popup window
 
 **Stack:** React 18, Babel standalone, SVG
 
