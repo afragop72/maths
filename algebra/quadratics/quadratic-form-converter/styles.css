@@ -476,72 +476,6 @@ h1 {
   margin-top: 8px;
 }
 
-/* ─── Visual Equivalence ─── */
-
-.visual-panel {
-  background: var(--panel);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 28px;
-  grid-column: 1 / -1;
-}
-
-.visual-panel h3 {
-  font-family: var(--serif);
-  font-size: 1.15rem;
-  margin: 0 0 20px;
-  color: var(--ink);
-  text-align: center;
-}
-
-.graph-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* ─── Export Footer ─── */
-
-.export-footer {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 24px;
-}
-
-.export-btn {
-  font-family: var(--sans);
-  font-size: 0.88rem;
-  font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 2px solid var(--border);
-  background: var(--panel);
-  color: var(--ink);
-}
-
-.export-btn:hover {
-  border-color: var(--accent);
-  background: rgba(255, 107, 61, 0.06);
-}
-
-.copy-btn {
-  border: 2px solid var(--accent);
-  background: var(--accent);
-  color: #fff;
-}
-
-.copy-btn:hover {
-  background: var(--accent-dark);
-  border-color: var(--accent-dark);
-}
-
 /* ─── Related Tools ─── */
 
 .related-tools {
@@ -646,7 +580,7 @@ h1 {
 
 @media (max-width: 768px) {
   .page { padding: 32px 18px 60px; }
-  .input-panel, .conversion-panel, .steps-panel, .visual-panel { padding: 20px; }
+  .input-panel, .conversion-panel, .steps-panel { padding: 20px; }
 }
 
 @media (max-width: 480px) {

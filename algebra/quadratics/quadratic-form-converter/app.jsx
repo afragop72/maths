@@ -10,9 +10,6 @@ const FORMS = {
   FACTORED: 'factored'
 };
 
-const VP = { w: 900, h: 400 };
-const PAD = 60;
-
 const PRESETS = [
   { form: 'standard', a: 1, b: -2, c: -3, label: 'x² − 2x − 3' },
   { form: 'standard', a: 2, b: 8, c: 6, label: '2x² + 8x + 6' },
@@ -431,61 +428,6 @@ function formatFactored(a, r1, r2) {
   return <>{parts}</>;
 }
 
-// Evaluate quadratic at x
-function evaluateQuadratic(params, form, x) {
-  if (form === FORMS.STANDARD) {
-    const { a, b, c } = params;
-    return a * x * x + b * x + c;
-  } else if (form === FORMS.VERTEX) {
-    const { a, h, k } = params;
-    return a * (x - h) * (x - h) + k;
-  } else if (form === FORMS.FACTORED) {
-    const { a, r1, r2 } = params;
-    return a * (x - r1) * (x - r2);
-  }
-  return 0;
-}
-
-// Get viewing range for graph
-function getViewRange(params, form) {
-  let vertex;
-
-  if (form === FORMS.STANDARD) {
-    const { a, b } = params;
-    vertex = { x: -b / (2 * a) };
-  } else if (form === FORMS.VERTEX) {
-    vertex = { x: params.h };
-  } else if (form === FORMS.FACTORED) {
-    const { r1, r2 } = params;
-    vertex = { x: (r1 + r2) / 2 };
-  }
-
-  const span = 8;
-  const xMin = vertex.x - span / 2;
-  const xMax = vertex.x + span / 2;
-
-  let yMin = Infinity, yMax = -Infinity;
-  for (let i = 0; i <= 50; i++) {
-    const x = xMin + (i / 50) * (xMax - xMin);
-    const y = evaluateQuadratic(params, form, x);
-    if (isFinite(y)) {
-      yMin = Math.min(yMin, y);
-      yMax = Math.max(yMax, y);
-    }
-  }
-
-  const yPad = (yMax - yMin) * 0.2;
-  return { xMin, xMax, yMin: yMin - yPad, yMax: yMax + yPad };
-}
-
-// Convert math coords to SVG coords
-function toSvg(mathX, mathY, bounds) {
-  const { xMin, xMax, yMin, yMax } = bounds;
-  const sx = PAD + ((mathX - xMin) / (xMax - xMin)) * (VP.w - 2 * PAD);
-  const sy = VP.h - PAD - ((mathY - yMin) / (yMax - yMin)) * (VP.h - 2 * PAD);
-  return { sx, sy };
-}
-
 // ─────────────────────────────────────────────────────────────
 // Conversion Logic & Step Generation
 // ─────────────────────────────────────────────────────────────
@@ -829,54 +771,6 @@ function factoredToVertexSteps({ a, r1, r2 }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Export Utilities
-// ─────────────────────────────────────────────────────────────
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function svgToString(svgElement) {
-  return new XMLSerializer().serializeToString(svgElement);
-}
-
-function exportSvg(svgElement, filename) {
-  const svgString = svgToString(svgElement);
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
-  downloadBlob(blob, filename);
-}
-
-function exportPng(svgElement, filename) {
-  const canvas = document.createElement('canvas');
-  canvas.width = VP.w;
-  canvas.height = VP.h;
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, VP.w, VP.h);
-
-  const svgString = svgToString(svgElement);
-  const img = new Image();
-  const blob = new Blob([svgString], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0);
-    canvas.toBlob((pngBlob) => {
-      downloadBlob(pngBlob, filename);
-      URL.revokeObjectURL(url);
-    });
-  };
-
-  img.src = url;
-}
-
-// ─────────────────────────────────────────────────────────────
 // React Components
 // ─────────────────────────────────────────────────────────────
 
@@ -1179,141 +1073,6 @@ function StepsPanel({ steps }) {
   );
 }
 
-function VisualPanel({ sourceForm, targetForm, params, result }) {
-  const svgRef = React.useRef(null);
-
-  if (!result) return null;
-
-  const bounds = getViewRange(params, sourceForm);
-  const { xMin, xMax, yMin, yMax } = bounds;
-
-  // Generate parabola path
-  const points = [];
-  for (let i = 0; i <= 100; i++) {
-    const x = xMin + (i / 100) * (xMax - xMin);
-    const y = evaluateQuadratic(params, sourceForm, x);
-    if (isFinite(y)) {
-      const { sx, sy } = toSvg(x, y, bounds);
-      points.push(`${sx},${sy}`);
-    }
-  }
-  const pathData = `M ${points.join(' L ')}`;
-
-  // Axis lines
-  const zeroX = toSvg(0, 0, bounds);
-  const leftEdge = toSvg(xMin, 0, bounds);
-  const rightEdge = toSvg(xMax, 0, bounds);
-  const bottomEdge = toSvg(0, yMin, bounds);
-  const topEdge = toSvg(0, yMax, bounds);
-
-  return (
-    <div className="visual-panel">
-      <h3>Visual Equivalence</h3>
-      <p style={{ textAlign: 'center', color: 'var(--muted)', marginBottom: '20px' }}>
-        Both forms represent the same parabola
-      </p>
-
-      <div className="graph-container">
-        <svg ref={svgRef} viewBox={`0 0 ${VP.w} ${VP.h}`} style={{ maxWidth: '900px', width: '100%' }}>
-          <defs>
-            <marker id="arrowX" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <polygon points="0 0, 6 3, 0 6" fill="rgba(15, 23, 42, 0.4)" />
-            </marker>
-            <marker id="arrowY" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-              <polygon points="0 0, 6 3, 0 6" fill="rgba(15, 23, 42, 0.4)" />
-            </marker>
-          </defs>
-
-          {/* Axes */}
-          {xMin <= 0 && xMax >= 0 && (
-            <line x1={zeroX.sx} y1={bottomEdge.sy} x2={zeroX.sx} y2={topEdge.sy}
-                  stroke="rgba(15, 23, 42, 0.25)" strokeWidth="1.5" markerEnd="url(#arrowY)" />
-          )}
-          {yMin <= 0 && yMax >= 0 && (
-            <line x1={leftEdge.sx} y1={zeroX.sy} x2={rightEdge.sx} y2={zeroX.sy}
-                  stroke="rgba(15, 23, 42, 0.25)" strokeWidth="1.5" markerEnd="url(#arrowX)" />
-          )}
-
-          {/* Grid */}
-          {Array.from({ length: 9 }, (_, i) => {
-            const x = xMin + ((i + 1) / 10) * (xMax - xMin);
-            const { sx } = toSvg(x, 0, bounds);
-            return (
-              <line key={`vgrid-${i}`} x1={sx} y1={PAD} x2={sx} y2={VP.h - PAD}
-                    stroke="rgba(15, 23, 42, 0.06)" strokeWidth="1" />
-            );
-          })}
-          {Array.from({ length: 9 }, (_, i) => {
-            const y = yMin + ((i + 1) / 10) * (yMax - yMin);
-            const { sy } = toSvg(0, y, bounds);
-            return (
-              <line key={`hgrid-${i}`} x1={PAD} y1={sy} x2={VP.w - PAD} y2={sy}
-                    stroke="rgba(15, 23, 42, 0.06)" strokeWidth="1" />
-            );
-          })}
-
-          {/* Parabola */}
-          <path d={pathData} fill="none" stroke="#ff6b3d" strokeWidth="3" strokeLinecap="round" />
-
-          {/* Vertex marker */}
-          {sourceForm === FORMS.VERTEX && (
-            (() => {
-              const { h, k } = params;
-              const { sx, sy } = toSvg(h, k, bounds);
-              return (
-                <>
-                  <circle cx={sx} cy={sy} r="5" fill="#3b82f6" />
-                  <text x={sx + 10} y={sy - 10} fontSize="14" fill="var(--ink)" fontWeight="600">
-                    Vertex ({fmtNumber(h)}, {fmtNumber(k)})
-                  </text>
-                </>
-              );
-            })()
-          )}
-
-          {/* Root markers */}
-          {sourceForm === FORMS.FACTORED && (
-            (() => {
-              const { r1, r2 } = params;
-              const p1 = toSvg(r1, 0, bounds);
-              const p2 = toSvg(r2, 0, bounds);
-              return (
-                <>
-                  <circle cx={p1.sx} cy={p1.sy} r="5" fill="#10b981" />
-                  <text x={p1.sx} y={p1.sy + 20} fontSize="12" fill="var(--ink)" textAnchor="middle">
-                    r₁ = {fmtNumber(r1)}
-                  </text>
-                  <circle cx={p2.sx} cy={p2.sy} r="5" fill="#10b981" />
-                  <text x={p2.sx} y={p2.sy + 20} fontSize="12" fill="var(--ink)" textAnchor="middle">
-                    r₂ = {fmtNumber(r2)}
-                  </text>
-                </>
-              );
-            })()
-          )}
-        </svg>
-      </div>
-
-      <div className="export-footer">
-        <button className="export-btn" onClick={() => exportSvg(svgRef.current, 'quadratic-converter.svg')}>
-          Export SVG
-        </button>
-        <button className="export-btn" onClick={() => exportPng(svgRef.current, 'quadratic-converter.png')}>
-          Export PNG
-        </button>
-        <button className="copy-btn" onClick={() => {
-          navigator.clipboard.writeText(result ?
-            (targetForm === FORMS.STANDARD ? formatStandard(result.a, result.b, result.c) :
-             targetForm === FORMS.VERTEX ? formatVertex(result.a, result.h, result.k) :
-             formatFactored(result.a, result.r1, result.r2)) : '');
-        }}>
-          Copy Result
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function RelatedTools() {
   return (
     <div className="related-tools">
@@ -1458,15 +1217,6 @@ function App() {
       </div>
 
       {conversion.steps.length > 0 && <StepsPanel steps={conversion.steps} />}
-
-      {conversion.result && (
-        <VisualPanel
-          sourceForm={sourceForm}
-          targetForm={targetForm}
-          params={params}
-          result={conversion.result}
-        />
-      )}
 
       <RelatedTools />
     </div>
