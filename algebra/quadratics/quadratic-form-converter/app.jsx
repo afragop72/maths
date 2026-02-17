@@ -152,6 +152,34 @@ function fmtNumber(n) {
   return rounded.toString();
 }
 
+// Simplify square root: √n → a√b where a² * b = n and b has no perfect square factors
+function simplifySquareRoot(n) {
+  if (n < 0) return { coef: 1, radical: n, isImaginary: true };
+  if (n === 0) return { coef: 0, radical: 1, isImaginary: false };
+
+  let coef = 1;
+  let radical = n;
+
+  // Factor out perfect squares
+  let factor = 2;
+  while (factor * factor <= radical) {
+    while (radical % (factor * factor) === 0) {
+      coef *= factor;
+      radical /= (factor * factor);
+    }
+    factor++;
+  }
+
+  return { coef, radical, isImaginary: false };
+}
+
+// Check if a number is a perfect square
+function isPerfectSquare(n) {
+  if (n < 0) return false;
+  const sqrt = Math.sqrt(n);
+  return Math.abs(sqrt - Math.round(sqrt)) < 1e-10;
+}
+
 // Fraction component for JSX rendering
 function Frac({ n, d }) {
   return (
@@ -531,6 +559,10 @@ function standardToFactoredSteps({ a, b, c }) {
   const r1 = (-b + sqrtDisc) / (2 * a);
   const r2 = (-b - sqrtDisc) / (2 * a);
 
+  // Simplify the square root
+  const { coef: sqrtCoef, radical: sqrtRadical } = simplifySquareRoot(disc);
+  const isPerfect = sqrtRadical === 1;
+
   const steps = [
     {
       number: 'Step 1',
@@ -545,12 +577,46 @@ function standardToFactoredSteps({ a, b, c }) {
     {
       number: 'Step 3',
       description: `Apply the quadratic formula: x = (−b ± √Δ) / (2a)`,
-      math: <>x = (−{fmtFrac(b)} ± {fmtFrac(sqrtDisc)}) / {fmtFrac(2 * a)}</>
+      math: isPerfect
+        ? <>x = (−{fmtFrac(b)} ± {fmtFrac(sqrtCoef)}) / {fmtFrac(2 * a)}</>
+        : sqrtCoef === 1
+          ? <>x = (−{fmtFrac(b)} ± √{fmtFrac(sqrtRadical)}) / {fmtFrac(2 * a)}</>
+          : <>x = (−{fmtFrac(b)} ± {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)}) / {fmtFrac(2 * a)}</>
     },
     {
       number: 'Step 4',
       description: `Calculate the two roots:`,
-      math: <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
+      math: isPerfect
+        ? <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
+        : (() => {
+            // Express roots as fractions with radicals
+            const twoA = 2 * a;
+            const negB = -b;
+
+            // Simplify the fraction by finding GCD
+            const gcd1 = gcd(Math.abs(negB + sqrtCoef), Math.abs(twoA));
+            const gcd2 = gcd(Math.abs(negB - sqrtCoef), Math.abs(twoA));
+
+            if (negB === 0) {
+              // Special case: b = 0, so roots are ±√ / (2a)
+              if (sqrtCoef % twoA === 0) {
+                const simplified = sqrtCoef / twoA;
+                return sqrtRadical === 1
+                  ? <>r₁ = {fmtFrac(simplified)}, r₂ = {fmtFrac(-simplified)}</>
+                  : simplified === 1
+                    ? <>r₁ = √{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}, r₂ = −√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}</>
+                    : <>r₁ = {fmtFrac(simplified)}√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}, r₂ = −{fmtFrac(simplified)}√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}</>;
+              }
+              return sqrtCoef === 1
+                ? <>r₁ = √{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}, r₂ = −√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}</>
+                : <>r₁ = {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}, r₂ = −{fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)} / {fmtFrac(twoA)}</>;
+            }
+
+            // General case: (−b ± coef√radical) / (2a)
+            return sqrtCoef === 1
+              ? <>r₁ = ({fmtFrac(negB)} + √{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}, r₂ = ({fmtFrac(negB)} − √{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}</>
+              : <>r₁ = ({fmtFrac(negB)} + {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}, r₂ = ({fmtFrac(negB)} − {fmtFrac(sqrtCoef)}√{fmtFrac(sqrtRadical)}) / {fmtFrac(twoA)}</>;
+          })()
     },
     {
       number: 'Step 5',
@@ -610,6 +676,28 @@ function vertexToFactoredSteps({ a, h, k }) {
   const r1 = h + delta;
   const r2 = h - delta;
 
+  // Check if insideRoot involves a fraction
+  const insideRootFrac = toFraction(insideRoot);
+  const isPerfect = isPerfectSquare(insideRoot);
+
+  // Simplify square root of the fraction
+  let simplifiedRadical;
+  if (insideRootFrac.d === 1) {
+    // Integer under the root
+    const { coef, radical } = simplifySquareRoot(insideRootFrac.n);
+    simplifiedRadical = { coef, radical, den: 1, isPerfect: radical === 1 };
+  } else {
+    // Fraction under the root: √(n/d) = √n / √d
+    const { coef: nCoef, radical: nRad } = simplifySquareRoot(insideRootFrac.n);
+    const { coef: dCoef, radical: dRad } = simplifySquareRoot(insideRootFrac.d);
+    simplifiedRadical = {
+      coef: nCoef / dCoef,
+      radical: nRad,
+      den: dRad,
+      isPerfect: nRad === 1 && dRad === 1
+    };
+  }
+
   const steps = [
     {
       number: 'Step 1',
@@ -619,17 +707,33 @@ function vertexToFactoredSteps({ a, h, k }) {
     {
       number: 'Step 2',
       description: `Set equal to zero and solve: a(x − h)² + k = 0`,
-      math: <>(x − {fmtFrac(h)})² = {fmtFrac(-k / a)}</>
+      math: insideRootFrac.d === 1
+        ? <>(x − {fmtFrac(h)})² = {fmtFrac(insideRoot)}</>
+        : <>(x − {fmtFrac(h)})² = <Frac n={insideRootFrac.n} d={insideRootFrac.d} /></>
     },
     {
       number: 'Step 3',
       description: `Take the square root of both sides:`,
-      math: <>x − {fmtFrac(h)} = ±{fmtFrac(delta)}</>
+      math: simplifiedRadical.isPerfect
+        ? <>x − {fmtFrac(h)} = ±{fmtFrac(delta)}</>
+        : simplifiedRadical.den === 1
+          ? simplifiedRadical.coef === 1
+            ? <>x − {fmtFrac(h)} = ±√{fmtFrac(simplifiedRadical.radical)}</>
+            : <>x − {fmtFrac(h)} = ±{fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)}</>
+          : simplifiedRadical.coef === 1
+            ? <>x − {fmtFrac(h)} = ±√{fmtFrac(simplifiedRadical.radical)} / √{fmtFrac(simplifiedRadical.den)}</>
+            : <>x − {fmtFrac(h)} = ±{fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)} / √{fmtFrac(simplifiedRadical.den)}</>
     },
     {
       number: 'Step 4',
       description: `Solve for x:`,
-      math: <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
+      math: simplifiedRadical.isPerfect
+        ? <>r₁ = {fmtFrac(r1)}, r₂ = {fmtFrac(r2)}</>
+        : simplifiedRadical.den === 1
+          ? simplifiedRadical.coef === 1
+            ? <>r₁ = {fmtFrac(h)} + √{fmtFrac(simplifiedRadical.radical)}, r₂ = {fmtFrac(h)} − √{fmtFrac(simplifiedRadical.radical)}</>
+            : <>r₁ = {fmtFrac(h)} + {fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)}, r₂ = {fmtFrac(h)} − {fmtFrac(simplifiedRadical.coef)}√{fmtFrac(simplifiedRadical.radical)}</>
+          : <>r₁ ≈ {fmtNumber(r1)}, r₂ ≈ {fmtNumber(r2)}</>
     },
     {
       number: 'Step 5',
