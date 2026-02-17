@@ -32,18 +32,52 @@ function gcd(a, b) {
   return a || 1;
 }
 
-function toFraction(decimal, maxDenominator = 10000) {
+// Create a fraction from numerator and denominator, reduced to lowest terms
+function makeFraction(num, den = 1) {
+  if (den === 0) return { n: 0, d: 1, isDecimal: false };
+
+  // Handle sign
+  if (den < 0) {
+    num = -num;
+    den = -den;
+  }
+
+  // Check if inputs are integers
+  if (!Number.isInteger(num) || !Number.isInteger(den)) {
+    // Fall back to decimal conversion
+    return toFraction(num / den);
+  }
+
+  // Reduce to lowest terms
+  const g = gcd(Math.abs(num), Math.abs(den));
+  return { n: num / g, d: den / g, isDecimal: false };
+}
+
+function toFraction(decimal, maxDenominator = 1000) {
   if (!isFinite(decimal)) return { n: decimal, d: 1, isDecimal: true };
-  if (Number.isInteger(decimal)) return { n: decimal, d: 1, isDecimal: false };
+
+  // Handle integers
+  if (Math.abs(decimal - Math.round(decimal)) < 1e-10) {
+    return { n: Math.round(decimal), d: 1, isDecimal: false };
+  }
 
   const sign = decimal < 0 ? -1 : 1;
   decimal = Math.abs(decimal);
 
-  // Try to find a fraction using continued fractions method
+  // Try simple denominators first (2-20) for common fractions
+  for (let d = 2; d <= 20; d++) {
+    const n = Math.round(decimal * d);
+    if (Math.abs(decimal - n / d) < 1e-10) {
+      const g = gcd(n, d);
+      return { n: sign * (n / g), d: d / g, isDecimal: false };
+    }
+  }
+
+  // Use continued fractions for more complex cases
   let a = 0, b = 1, c = 1, d = 0;
   let n = decimal;
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 100; i++) {
     const digit = Math.floor(n);
     const num = a + digit * c;
     const den = b + digit * d;
@@ -59,10 +93,57 @@ function toFraction(decimal, maxDenominator = 10000) {
 
     if (Math.abs(n - digit) < 1e-10) break;
     n = 1 / (n - digit);
+
+    if (!isFinite(n)) break;
   }
 
-  // If no good fraction found, return decimal
+  // Last resort: try rounding to nearest fraction with denominator up to maxDenominator
+  let bestNum = Math.round(decimal);
+  let bestDen = 1;
+  let bestError = Math.abs(decimal - bestNum);
+
+  for (let den = 2; den <= maxDenominator; den++) {
+    const num = Math.round(decimal * den);
+    const error = Math.abs(decimal - num / den);
+    if (error < bestError && error < 0.001) {
+      bestNum = num;
+      bestDen = den;
+      bestError = error;
+    }
+  }
+
+  if (bestError < 0.001) {
+    const g = gcd(bestNum, bestDen);
+    return { n: sign * (bestNum / g), d: bestDen / g, isDecimal: false };
+  }
+
+  // If still no good fraction found, return decimal
   return { n: sign * decimal, d: 1, isDecimal: true };
+}
+
+// Fraction arithmetic operations
+function fracAdd(f1, f2) {
+  const num = f1.n * f2.d + f2.n * f1.d;
+  const den = f1.d * f2.d;
+  return makeFraction(num, den);
+}
+
+function fracSub(f1, f2) {
+  const num = f1.n * f2.d - f2.n * f1.d;
+  const den = f1.d * f2.d;
+  return makeFraction(num, den);
+}
+
+function fracMul(f1, f2) {
+  return makeFraction(f1.n * f2.n, f1.d * f2.d);
+}
+
+function fracDiv(f1, f2) {
+  return makeFraction(f1.n * f2.d, f1.d * f2.n);
+}
+
+function fracToDecimal(f) {
+  return f.n / f.d;
 }
 
 function fmtNumber(n) {
