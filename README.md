@@ -1,12 +1,26 @@
-# Maths
+# Math Lab
 
-A collection of interactive web-based math visualization tools for exploring algebraic concepts.
+A collection of interactive web-based math visualization tools organized by subject.
 
-## Projects
+## Structure
 
-### Quadratics — [`quadratics/`](quadratics/)
+```text
+maths/
+├── index.html                          # Main hub page
+├── algebra/
+│   ├── index.html                     # Algebra hub
+│   └── quadratics/                    # Quadratics topic (4 tools)
+├── geometry/                           # Coming soon
+└── calculus/                           # Coming soon
+```
 
-#### [Quadratic Graph Studio](quadratics/quadratic-equation/)
+## Subjects
+
+### [Algebra](algebra/) — Equations, expressions, and algebraic structures
+
+#### Quadratics
+
+##### [Quadratic Graph Studio](algebra/quadratics/quadratic-equation/)
 
 Interactive graphing of quadratic equations (`y = ax² + bx + c`) with real-time visualization, animation, and analysis.
 
@@ -19,7 +33,7 @@ Interactive graphing of quadratic equations (`y = ax² + bx + c`) with real-time
 
 **Stack:** Vanilla JavaScript, HTML5 Canvas, CSS3
 
-#### [Quadratic Inequality Solver & Grapher](quadratics/quadratic-inequality/)
+##### [Quadratic Inequality Solver & Grapher](algebra/quadratics/quadratic-inequality/)
 
 Solve and graph quadratic inequalities (`ax² + bx + c ⋚ 0`) with a guided visual walkthrough.
 
@@ -32,7 +46,7 @@ Solve and graph quadratic inequalities (`ax² + bx + c ⋚ 0`) with a guided vis
 
 **Stack:** React 18, Babel standalone, SVG
 
-#### [Completing the Square](quadratics/completing-the-square/)
+##### [Completing the Square](algebra/quadratics/completing-the-square/)
 
 Convert quadratics to vertex form through a geometric area model and algebraic walkthrough.
 
@@ -45,7 +59,7 @@ Convert quadratics to vertex form through a geometric area model and algebraic w
 
 **Stack:** React 18, Babel standalone, SVG
 
-#### [Binomial Multiplication Visualizer](quadratics/sketch-binomial-factors/)
+##### [Binomial Multiplication Visualizer](algebra/quadratics/sketch-binomial-factors/)
 
 Step-by-step visualization of binomial multiplication using the FOIL method and an area model diagram.
 
@@ -58,6 +72,14 @@ Step-by-step visualization of binomial multiplication using the FOIL method and 
 
 **Stack:** React 18, Babel standalone, SVG
 
+## Navigation
+
+Each app includes:
+
+- **Breadcrumb navigation** at the top showing: Home → Subject → Topic → App
+- **Hamburger menu** (fixed top-left) with full site navigation tree
+- **Related tools footer** linking to sibling apps in the same topic
+
 ## Running
 
 Each project is a self-contained web app. Serve the repo with any local HTTP server:
@@ -68,7 +90,7 @@ npx serve .
 python3 -m http.server
 ```
 
-Then navigate to the project directory in the browser (e.g. `http://localhost:3000/quadratics/quadratic-equation/`).
+Then open `http://localhost:3000/` in your browser and navigate via the hub pages.
 
 ## License
 

@@ -7,7 +7,55 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <button class="hamburger-btn" id="menu-btn" aria-label="Open menu">
+      <svg viewBox="0 0 24 24">
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <div class="menu-overlay" id="menu-overlay"></div>
+
+    <div class="menu-panel" id="menu-panel">
+      <div class="menu-section">
+        <div class="menu-section-title">Navigate</div>
+        <a href="../../../" class="menu-link">🏠 Home</a>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-section">
+        <div class="menu-section-title">Algebra</div>
+        <a href="../../" class="menu-link">Quadratics</a>
+        <a href="../quadratic-equation/" class="menu-link indent active">Quadratic Graph Studio</a>
+        <a href="../quadratic-inequality/" class="menu-link indent">Inequality Solver</a>
+        <a href="../completing-the-square/" class="menu-link indent">Completing the Square</a>
+        <a href="../sketch-binomial-factors/" class="menu-link indent">Binomial Multiplication</a>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-section">
+        <div class="menu-section-title">Coming Soon</div>
+        <span class="menu-link" style="opacity: 0.5; cursor: not-allowed">Geometry</span>
+        <span class="menu-link" style="opacity: 0.5; cursor: not-allowed">Calculus</span>
+      </div>
+    </div>
+
     <div class="page">
+      <nav class="breadcrumb">
+        <a href="../../../">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </a>
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <a href="../../">Algebra</a>
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <a href="../">Quadratics</a>
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="breadcrumb-current">Quadratic Graph Studio</span>
+      </nav>
+
       <header class="hero">
         <div>
           <p class="eyebrow">Math Lab</p>
@@ -168,6 +216,24 @@
           </div>
         </section>
       </main>
+
+      <div class="related-tools">
+        <h3 class="related-tools-title">Related Tools</h3>
+        <div class="related-tools-grid">
+          <a href="../quadratic-inequality/" class="related-tool-link">
+            <div class="related-tool-name">Inequality Solver</div>
+            <p class="related-tool-desc">Solve inequalities with sign analysis and intervals</p>
+          </a>
+          <a href="../completing-the-square/" class="related-tool-link">
+            <div class="related-tool-name">Completing the Square</div>
+            <p class="related-tool-desc">Convert to vertex form with visual area model</p>
+          </a>
+          <a href="../sketch-binomial-factors/" class="related-tool-link">
+            <div class="related-tool-name">Binomial Multiplication</div>
+            <p class="related-tool-desc">Visualize FOIL method with area model diagrams</p>
+          </a>
+        </div>
+      </div>
     </div>
 
     <script src="app.js"></script>

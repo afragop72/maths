@@ -15,6 +15,24 @@
  */
 
 // ============================================================================
+// HAMBURGER MENU
+// ============================================================================
+
+const menuBtn = document.getElementById("menu-btn");
+const menuOverlay = document.getElementById("menu-overlay");
+const menuPanel = document.getElementById("menu-panel");
+
+menuBtn.addEventListener("click", () => {
+  menuPanel.classList.add("open");
+  menuOverlay.classList.add("open");
+});
+
+menuOverlay.addEventListener("click", () => {
+  menuPanel.classList.remove("open");
+  menuOverlay.classList.remove("open");
+});
+
+// ============================================================================
 // DOM ELEMENT REFERENCES
 // ============================================================================
 

@@ -320,6 +320,74 @@ function PolyDisplay({ A, B, C, varName }) {
   return terms.length ? <>{terms}</> : <>0</>;
 }
 
+function Breadcrumb() {
+  return (
+    <nav className="breadcrumb">
+      <a href="../../../"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../../">Algebra</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../">Quadratics</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <span className="breadcrumb-current">Binomial Multiplication</span>
+    </nav>
+  );
+}
+
+function HamburgerMenu() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <button className="hamburger-btn" onClick={() => setIsOpen(true)} aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div className={`menu-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)}></div>
+      <div className={`menu-panel${isOpen ? " open" : ""}`}>
+        <div className="menu-section">
+          <div className="menu-section-title">Navigate</div>
+          <a href="../../../" className="menu-link">🏠 Home</a>
+        </div>
+        <div className="menu-divider"></div>
+        <div className="menu-section">
+          <div className="menu-section-title">Algebra</div>
+          <a href="../../" className="menu-link">Quadratics</a>
+          <a href="../quadratic-equation/" className="menu-link indent">Quadratic Graph Studio</a>
+          <a href="../quadratic-inequality/" className="menu-link indent">Inequality Solver</a>
+          <a href="../completing-the-square/" className="menu-link indent">Completing the Square</a>
+          <a href="../sketch-binomial-factors/" className="menu-link indent active">Binomial Multiplication</a>
+        </div>
+        <div className="menu-divider"></div>
+        <div className="menu-section">
+          <div className="menu-section-title">Coming Soon</div>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Geometry</span>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Calculus</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RelatedTools() {
+  const tools = [
+    { name: "Quadratic Graph Studio", href: "../quadratic-equation/", desc: "Explore parabolas with sliders and real-time updates" },
+    { name: "Inequality Solver", href: "../quadratic-inequality/", desc: "Solve inequalities with sign analysis and intervals" },
+    { name: "Completing the Square", href: "../completing-the-square/", desc: "Convert to vertex form with visual area model" }
+  ];
+  return (
+    <div className="related-tools">
+      <h3 className="related-tools-title">Related Tools</h3>
+      <div className="related-tools-grid">
+        {tools.map((tool, i) => (
+          <a key={i} href={tool.href} className="related-tool-link">
+            <div className="related-tool-name">{tool.name}</div>
+            <p className="related-tool-desc">{tool.desc}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HeroSection() {
   return (
     <header className="hero">
@@ -653,45 +721,50 @@ function App() {
   const stepContent = model ? getStepContent(step, model) : null;
 
   return (
-    <div className="page">
-      <HeroSection />
+    <>
+      <HamburgerMenu />
+      <div className="page">
+        <Breadcrumb />
+        <HeroSection />
 
-      <InputBar
-        bin1={bin1}
-        bin2={bin2}
-        onBin1Change={(v) => { setBin1(v); setStep(0); }}
-        onBin2Change={(v) => { setBin2(v); setStep(0); }}
-        onPreset={handlePreset}
-      />
+        <InputBar
+          bin1={bin1}
+          bin2={bin2}
+          onBin1Change={(v) => { setBin1(v); setStep(0); }}
+          onBin2Change={(v) => { setBin2(v); setStep(0); }}
+          onPreset={handlePreset}
+        />
 
-      {parseError && <div className="error-banner">{parseError}</div>}
+        {parseError && <div className="error-banner">{parseError}</div>}
 
-      {model ? (
-        <>
-          <div className="diagram-card">
-            <div className="svg-container">
-              <AreaModelSvg model={model} step={step} svgRef={svgRef} />
+        {model ? (
+          <>
+            <div className="diagram-card">
+              <div className="svg-container">
+                <AreaModelSvg model={model} step={step} svgRef={svgRef} />
+              </div>
             </div>
-          </div>
 
-          <StepNav step={step} onStep={safeSetStep} />
+            <StepNav step={step} onStep={safeSetStep} />
 
-          <ExplanationPanel key={step} content={stepContent} />
+            <ExplanationPanel key={step} content={stepContent} />
 
-          {step >= MAX_STEP && <ResultCard model={model} bin1={bin1} bin2={bin2} />}
+            {step >= MAX_STEP && <ResultCard model={model} bin1={bin1} bin2={bin2} />}
 
-          <ExportFooter svgRef={svgRef} model={model} bin1={bin1} bin2={bin2} />
-        </>
-      ) : (
-        !parseError && (
-          <div className="diagram-card">
-            <div className="no-diagram">
-              Enter two binomials above to see the area model.
+            <ExportFooter svgRef={svgRef} model={model} bin1={bin1} bin2={bin2} />
+            <RelatedTools />
+          </>
+        ) : (
+          !parseError && (
+            <div className="diagram-card">
+              <div className="no-diagram">
+                Enter two binomials above to see the area model.
+              </div>
             </div>
-          </div>
-        )
-      )}
+          )
+        )}
       </div>
+    </>
   );
 }
 

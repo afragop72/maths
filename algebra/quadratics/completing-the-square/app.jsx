@@ -640,6 +640,100 @@ function getStepContent(step, a, b, c, cs) {
 
 /* ─── React Components ─── */
 
+function Breadcrumb() {
+  return (
+    <nav className="breadcrumb">
+      <a href="../../../">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      </a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../../">Algebra</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../">Quadratics</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <span className="breadcrumb-current">Completing the Square</span>
+    </nav>
+  );
+}
+
+function HamburgerMenu() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button className="hamburger-btn" onClick={() => setIsOpen(true)} aria-label="Open menu">
+        <svg viewBox="0 0 24 24">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div className={`menu-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)}></div>
+
+      <div className={`menu-panel${isOpen ? " open" : ""}`}>
+        <div className="menu-section">
+          <div className="menu-section-title">Navigate</div>
+          <a href="../../../" className="menu-link">🏠 Home</a>
+        </div>
+
+        <div className="menu-divider"></div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Algebra</div>
+          <a href="../../" className="menu-link">Quadratics</a>
+          <a href="../quadratic-equation/" className="menu-link indent">Quadratic Graph Studio</a>
+          <a href="../quadratic-inequality/" className="menu-link indent">Inequality Solver</a>
+          <a href="../completing-the-square/" className="menu-link indent active">Completing the Square</a>
+          <a href="../sketch-binomial-factors/" className="menu-link indent">Binomial Multiplication</a>
+        </div>
+
+        <div className="menu-divider"></div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Coming Soon</div>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Geometry</span>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Calculus</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RelatedTools() {
+  const tools = [
+    {
+      name: "Quadratic Graph Studio",
+      href: "../quadratic-equation/",
+      desc: "Explore parabolas with sliders and real-time updates"
+    },
+    {
+      name: "Inequality Solver",
+      href: "../quadratic-inequality/",
+      desc: "Solve inequalities with sign analysis and intervals"
+    },
+    {
+      name: "Binomial Multiplication",
+      href: "../sketch-binomial-factors/",
+      desc: "Visualize FOIL method with area model diagrams"
+    }
+  ];
+
+  return (
+    <div className="related-tools">
+      <h3 className="related-tools-title">Related Tools</h3>
+      <div className="related-tools-grid">
+        {tools.map((tool, i) => (
+          <a key={i} href={tool.href} className="related-tool-link">
+            <div className="related-tool-name">{tool.name}</div>
+            <p className="related-tool-desc">{tool.desc}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HeroSection() {
   return (
     <header className="hero">
@@ -1174,57 +1268,62 @@ function App() {
   const activeSvgRef = step >= MAX_STEP ? miniSvgRef : areaSvgRef;
 
   return (
-    <div className="page">
-      <HeroSection />
-      <InputPanel
-        a={a} b={b} c={c}
-        onAChange={(v) => { setA(v); setStep(0); }}
-        onBChange={(v) => { setB(v); setStep(0); }}
-        onCChange={(v) => { setC(v); setStep(0); }}
-        onPreset={handlePreset}
-      />
+    <>
+      <HamburgerMenu />
+      <div className="page">
+        <Breadcrumb />
+        <HeroSection />
+        <InputPanel
+          a={a} b={b} c={c}
+          onAChange={(v) => { setA(v); setStep(0); }}
+          onBChange={(v) => { setB(v); setStep(0); }}
+          onCChange={(v) => { setC(v); setStep(0); }}
+          onPreset={handlePreset}
+        />
 
-      {error && <div className="error-banner">{error}</div>}
+        {error && <div className="error-banner">{error}</div>}
 
-      {!error && cs ? (
-        <>
-          <div className="main-grid">
-            <div className="graph-card">
-              <div className="svg-container">
-                {step < MAX_STEP ? (
-                  <AreaModelSvg a={numA} b={numB} c={numC} cs={cs} step={step} svgRef={areaSvgRef} />
-                ) : (
-                  <MiniParabola a={numA} b={numB} c={numC} cs={cs} svgRef={miniSvgRef} />
-                )}
+        {!error && cs ? (
+          <>
+            <div className="main-grid">
+              <div className="graph-card">
+                <div className="svg-container">
+                  {step < MAX_STEP ? (
+                    <AreaModelSvg a={numA} b={numB} c={numC} cs={cs} step={step} svgRef={areaSvgRef} />
+                  ) : (
+                    <MiniParabola a={numA} b={numB} c={numC} cs={cs} svgRef={miniSvgRef} />
+                  )}
+                </div>
+                <div className="graph-toolbar">
+                  <button className="magnify-btn" onClick={() => openMagnifiedGraph(activeSvgRef.current, quadStr)}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                      <line x1="8" y1="11" x2="14" y2="11" />
+                      <line x1="11" y1="8" x2="11" y2="14" />
+                    </svg>
+                    Magnify
+                  </button>
+                </div>
               </div>
-              <div className="graph-toolbar">
-                <button className="magnify-btn" onClick={() => openMagnifiedGraph(activeSvgRef.current, quadStr)}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="16.5" y1="16.5" x2="21" y2="21" />
-                    <line x1="8" y1="11" x2="14" y2="11" />
-                    <line x1="11" y1="8" x2="11" y2="14" />
-                  </svg>
-                  Magnify
-                </button>
+
+              <div className="sidebar">
+                <ExplanationPanel content={content} />
+                {step >= MAX_STEP && <ResultCard a={numA} cs={cs} />}
               </div>
             </div>
 
-            <div className="sidebar">
-              <ExplanationPanel content={content} />
-              {step >= MAX_STEP && <ResultCard a={numA} cs={cs} />}
-            </div>
+            <StepNav step={step} onStep={safeSetStep} />
+            <ExportFooter svgRef={activeSvgRef} a={numA} b={numB} c={numC} step={step} />
+            <RelatedTools />
+          </>
+        ) : !error && (
+          <div className="graph-card">
+            <div className="no-graph">Set a non-zero value for <strong>a</strong> to start.</div>
           </div>
-
-          <StepNav step={step} onStep={safeSetStep} />
-          <ExportFooter svgRef={activeSvgRef} a={numA} b={numB} c={numC} step={step} />
-        </>
-      ) : !error && (
-        <div className="graph-card">
-          <div className="no-graph">Set a non-zero value for <strong>a</strong> to start.</div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
 

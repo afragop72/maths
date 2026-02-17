@@ -563,6 +563,100 @@ function getStepContent(step, a, b, c, ineqType, roots, disc, vertex, solution) 
 
 /* ─── React Components ─── */
 
+function Breadcrumb() {
+  return (
+    <nav className="breadcrumb">
+      <a href="../../../">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      </a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../../">Algebra</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../">Quadratics</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <span className="breadcrumb-current">Inequality Solver</span>
+    </nav>
+  );
+}
+
+function HamburgerMenu() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button className="hamburger-btn" onClick={() => setIsOpen(true)} aria-label="Open menu">
+        <svg viewBox="0 0 24 24">
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div className={`menu-overlay${isOpen ? " open" : ""}`} onClick={() => setIsOpen(false)}></div>
+
+      <div className={`menu-panel${isOpen ? " open" : ""}`}>
+        <div className="menu-section">
+          <div className="menu-section-title">Navigate</div>
+          <a href="../../../" className="menu-link">🏠 Home</a>
+        </div>
+
+        <div className="menu-divider"></div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Algebra</div>
+          <a href="../../" className="menu-link">Quadratics</a>
+          <a href="../quadratic-equation/" className="menu-link indent">Quadratic Graph Studio</a>
+          <a href="../quadratic-inequality/" className="menu-link indent active">Inequality Solver</a>
+          <a href="../completing-the-square/" className="menu-link indent">Completing the Square</a>
+          <a href="../sketch-binomial-factors/" className="menu-link indent">Binomial Multiplication</a>
+        </div>
+
+        <div className="menu-divider"></div>
+
+        <div className="menu-section">
+          <div className="menu-section-title">Coming Soon</div>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Geometry</span>
+          <span className="menu-link" style={{opacity: 0.5, cursor: 'not-allowed'}}>Calculus</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RelatedTools() {
+  const tools = [
+    {
+      name: "Quadratic Graph Studio",
+      href: "../quadratic-equation/",
+      desc: "Explore parabolas with sliders and real-time updates"
+    },
+    {
+      name: "Completing the Square",
+      href: "../completing-the-square/",
+      desc: "Convert to vertex form with visual area model"
+    },
+    {
+      name: "Binomial Multiplication",
+      href: "../sketch-binomial-factors/",
+      desc: "Visualize FOIL method with area model diagrams"
+    }
+  ];
+
+  return (
+    <div className="related-tools">
+      <h3 className="related-tools-title">Related Tools</h3>
+      <div className="related-tools-grid">
+        {tools.map((tool, i) => (
+          <a key={i} href={tool.href} className="related-tool-link">
+            <div className="related-tool-name">{tool.name}</div>
+            <p className="related-tool-desc">{tool.desc}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HeroSection() {
   return (
     <header className="hero">
@@ -1173,86 +1267,91 @@ function App() {
     : null;
 
   return (
-    <div className="page">
-      <HeroSection />
+    <>
+      <HamburgerMenu />
+      <div className="page">
+        <Breadcrumb />
+        <HeroSection />
 
-      <InputPanel
-        a={a} b={b} c={c} ineqType={ineqType}
-        onAChange={makeCoefHandler(setA)}
-        onBChange={makeCoefHandler(setB)}
-        onCChange={makeCoefHandler(setC)}
-        onIneqChange={handleIneqChange}
-        onPreset={handlePreset}
-      />
+        <InputPanel
+          a={a} b={b} c={c} ineqType={ineqType}
+          onAChange={makeCoefHandler(setA)}
+          onBChange={makeCoefHandler(setB)}
+          onCChange={makeCoefHandler(setC)}
+          onIneqChange={handleIneqChange}
+          onPreset={handlePreset}
+        />
 
-      {error && <div className="error-banner">{error}</div>}
+        {error && <div className="error-banner">{error}</div>}
 
-      {!error ? (
-        <>
-          <div className="main-grid">
-            <div className="graph-card">
-              <div className="svg-container">
-                <ParabolaSvg
-                  a={numA} b={numB} c={numC} ineqType={ineqType}
-                  roots={roots} step={step} svgRef={svgRef}
-                  solution={solution}
-                />
-              </div>
-              <div className="graph-toolbar">
-                <button
-                  className="magnify-btn"
-                  onClick={() => openMagnifiedGraph(svgRef.current, ineqStr)}
-                  aria-label="Open graph in new window"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="6.5" cy="6.5" r="4.5" />
-                    <line x1="10" y1="10" x2="14.5" y2="14.5" />
-                    <line x1="4.5" y1="6.5" x2="8.5" y2="6.5" />
-                    <line x1="6.5" y1="4.5" x2="6.5" y2="8.5" />
-                  </svg>
-                  Magnify
-                </button>
-              </div>
-            </div>
-
-            <div className="sidebar">
-              <ExplanationPanel
-                key={step}
-                content={stepContent}
-                a={numA} b={numB} c={numC}
-                ineqType={ineqType}
-                roots={roots}
-              />
-
-              {step >= 4 && (
-                <div className="numberline-card">
-                  <div className="svg-container">
-                    <NumberLine
-                      roots={roots} a={numA} b={numB} c={numC}
-                      ineqType={ineqType} solution={solution} step={step}
-                    />
-                  </div>
+        {!error ? (
+          <>
+            <div className="main-grid">
+              <div className="graph-card">
+                <div className="svg-container">
+                  <ParabolaSvg
+                    a={numA} b={numB} c={numC} ineqType={ineqType}
+                    roots={roots} step={step} svgRef={svgRef}
+                    solution={solution}
+                  />
                 </div>
-              )}
+                <div className="graph-toolbar">
+                  <button
+                    className="magnify-btn"
+                    onClick={() => openMagnifiedGraph(svgRef.current, ineqStr)}
+                    aria-label="Open graph in new window"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="6.5" cy="6.5" r="4.5" />
+                      <line x1="10" y1="10" x2="14.5" y2="14.5" />
+                      <line x1="4.5" y1="6.5" x2="8.5" y2="6.5" />
+                      <line x1="6.5" y1="4.5" x2="6.5" y2="8.5" />
+                    </svg>
+                    Magnify
+                  </button>
+                </div>
+              </div>
 
-              {step >= MAX_STEP && (
-                <ResultCard solution={solution} ineqStr={ineqStr} />
-              )}
+              <div className="sidebar">
+                <ExplanationPanel
+                  key={step}
+                  content={stepContent}
+                  a={numA} b={numB} c={numC}
+                  ineqType={ineqType}
+                  roots={roots}
+                />
+
+                {step >= 4 && (
+                  <div className="numberline-card">
+                    <div className="svg-container">
+                      <NumberLine
+                        roots={roots} a={numA} b={numB} c={numC}
+                        ineqType={ineqType} solution={solution} step={step}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {step >= MAX_STEP && (
+                  <ResultCard solution={solution} ineqStr={ineqStr} />
+                )}
+              </div>
+            </div>
+
+            <StepNav step={step} onStep={safeSetStep} />
+
+            <ExportFooter svgRef={svgRef} a={numA} b={numB} c={numC} ineqType={ineqType} />
+            <RelatedTools />
+          </>
+        ) : (
+          <div className="graph-card">
+            <div className="no-graph">
+              Set a non-zero value for a to begin.
             </div>
           </div>
-
-          <StepNav step={step} onStep={safeSetStep} />
-
-          <ExportFooter svgRef={svgRef} a={numA} b={numB} c={numC} ineqType={ineqType} />
-        </>
-      ) : (
-        <div className="graph-card">
-          <div className="no-graph">
-            Set a non-zero value for a to begin.
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
 

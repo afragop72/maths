@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Math Lab</title>
+    <title>Algebra • Math Lab</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700&family=Manrope:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -40,6 +40,43 @@
         max-width: 960px;
         margin: 0 auto;
         padding: 56px 24px 80px;
+      }
+
+      /* ─── Breadcrumb ─── */
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 32px;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+
+      .breadcrumb a {
+        color: var(--accent-dark);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+      }
+
+      .breadcrumb a:hover {
+        color: var(--accent);
+      }
+
+      .breadcrumb svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .breadcrumb-current {
+        color: var(--ink);
+        font-weight: 600;
       }
 
       /* ─── Hero ─── */
@@ -207,12 +244,19 @@
 
   <body>
     <div class="page">
+      <nav class="breadcrumb">
+        <a href="../">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </a>
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        <span class="breadcrumb-current">Algebra</span>
+      </nav>
+
       <header class="hero">
-        <p class="eyebrow">Interactive Tools</p>
-        <h1>Math Lab</h1>
+        <p class="eyebrow">Subject</p>
+        <h1>Algebra</h1>
         <p class="subhead">
-          A collection of visual, step-by-step tools for exploring mathematical concepts.
-          Pick a subject to get started.
+          Interactive tools for exploring algebraic concepts through visualization and step-by-step walkthroughs.
         </p>
       </header>
 
@@ -221,37 +265,49 @@
           <div class="topic-icon">
             <svg viewBox="0 0 24 24"><path d="M4 20 Q12 2 20 20"/><line x1="6" y1="16" x2="18" y2="16"/></svg>
           </div>
-          <h2>Subjects</h2>
+          <h2>Quadratics</h2>
         </div>
 
         <div class="card-grid">
-          <a class="card" href="algebra/">
-            <div class="card-tag">4 Tools</div>
-            <h3>Algebra</h3>
-            <p>Explore quadratics through graphing, inequalities, completing the square, and binomial multiplication. Visual area models and step-by-step walkthroughs.</p>
+          <a class="card" href="quadratics/quadratic-equation/">
+            <div class="card-tag">Graphing</div>
+            <h3>Quadratic Graph Studio</h3>
+            <p>Explore parabolas with precision. Adjust coefficients with sliders and instantly see the curve, vertex, roots, and discriminant update in real time.</p>
             <div class="card-footer">
-              Browse algebra
+              Open tool
               <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </div>
           </a>
 
-          <div class="card" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
-            <div class="card-tag">Coming Soon</div>
-            <h3>Geometry</h3>
-            <p>Triangles, circles, transformations, and more. Interactive visualizations for geometric concepts and proofs.</p>
-            <div class="card-footer" style="color: var(--muted);">
-              In development
+          <a class="card" href="quadratics/quadratic-inequality/">
+            <div class="card-tag">Inequalities</div>
+            <h3>Inequality Solver &amp; Grapher</h3>
+            <p>Solve quadratic inequalities step by step. See the parabola, sign analysis, number line, and solution in interval notation, set-builder, and plain English.</p>
+            <div class="card-footer">
+              Open tool
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </div>
-          </div>
+          </a>
 
-          <div class="card" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
-            <div class="card-tag">Coming Soon</div>
-            <h3>Calculus</h3>
-            <p>Derivatives, integrals, limits, and continuity. Step-by-step differentiation and integration with visual curve analysis.</p>
-            <div class="card-footer" style="color: var(--muted);">
-              In development
+          <a class="card" href="quadratics/completing-the-square/">
+            <div class="card-tag">Algebra</div>
+            <h3>Completing the Square</h3>
+            <p>Convert quadratics to vertex form with a visual area model showing why it's called "completing" the square, plus a step-by-step algebraic walkthrough.</p>
+            <div class="card-footer">
+              Open tool
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </div>
-          </div>
+          </a>
+
+          <a class="card" href="quadratics/sketch-binomial-factors/">
+            <div class="card-tag">Factoring</div>
+            <h3>Binomial Multiplication Visualizer</h3>
+            <p>Visualize binomial multiplication using the FOIL method and a color-coded area model diagram, with a 6-step educational walkthrough.</p>
+            <div class="card-footer">
+              Open tool
+              <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </a>
         </div>
       </section>
 
