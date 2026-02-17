@@ -325,6 +325,30 @@ h1 {
   text-align: right;
 }
 
+.manual-input {
+  width: 80px;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: #fafbff;
+  color: var(--ink);
+  text-align: right;
+  transition: border-color 0.2s ease;
+}
+
+.manual-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.manual-input::-webkit-inner-spin-button,
+.manual-input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
 .presets {
   display: flex;
   flex-direction: column;
@@ -553,4 +577,5 @@ h1 {
 @media (max-width: 480px) {
   .slider-container { flex-direction: column; align-items: stretch; }
   .value-display { text-align: left; }
+  .manual-input { width: 100%; }
 }

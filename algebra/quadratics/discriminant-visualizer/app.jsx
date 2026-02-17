@@ -421,21 +421,39 @@ function ControlPanel({ a, b, c, onSetA, onSetB, onSetC, onLoadPreset }) {
         <label className="control-label">a = {fmtNumber(a)}</label>
         <div className="slider-container">
           <input type="range" min="-3" max="3" step="0.5" value={a} onChange={(e) => onSetA(parseFloat(e.target.value))} className="slider" />
-          <span className="value-display">{fmtNumber(a)}</span>
+          <input
+            type="number"
+            value={a}
+            onChange={(e) => onSetA(parseFloat(e.target.value) || 0)}
+            className="manual-input"
+            step="any"
+          />
         </div>
       </div>
       <div className="control-group">
         <label className="control-label">b = {fmtNumber(b)}</label>
         <div className="slider-container">
           <input type="range" min="-10" max="10" step="0.5" value={b} onChange={(e) => onSetB(parseFloat(e.target.value))} className="slider" />
-          <span className="value-display">{fmtNumber(b)}</span>
+          <input
+            type="number"
+            value={b}
+            onChange={(e) => onSetB(parseFloat(e.target.value) || 0)}
+            className="manual-input"
+            step="any"
+          />
         </div>
       </div>
       <div className="control-group">
         <label className="control-label">c = {fmtNumber(c)}</label>
         <div className="slider-container">
           <input type="range" min="-10" max="10" step="0.5" value={c} onChange={(e) => onSetC(parseFloat(e.target.value))} className="slider" />
-          <span className="value-display">{fmtNumber(c)}</span>
+          <input
+            type="number"
+            value={c}
+            onChange={(e) => onSetC(parseFloat(e.target.value) || 0)}
+            className="manual-input"
+            step="any"
+          />
         </div>
       </div>
       <div className="presets">
