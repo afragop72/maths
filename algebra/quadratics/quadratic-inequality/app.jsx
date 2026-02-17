@@ -607,6 +607,9 @@ function HamburgerMenu() {
           <a href="../../" className="menu-link">Quadratics</a>
           <a href="../quadratic-equation/" className="menu-link indent">Quadratic Graph Studio</a>
           <a href="../quadratic-inequality/" className="menu-link indent active">Inequality Solver</a>
+          <a href="../quadratic-inequality-region/" className="menu-link indent">Inequality Regions</a>
+          <a href="../parabola-transformations/" className="menu-link indent">Transformations</a>
+          <a href="../discriminant-visualizer/" className="menu-link indent">Discriminant</a>
           <a href="../completing-the-square/" className="menu-link indent">Completing the Square</a>
           <a href="../sketch-binomial-factors/" className="menu-link indent">Binomial Multiplication</a>
         </div>

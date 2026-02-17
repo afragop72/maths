@@ -9,7 +9,7 @@ maths/
 ├── index.html                          # Main hub page
 ├── algebra/
 │   ├── index.html                     # Algebra hub
-│   └── quadratics/                    # Quadratics topic (5 tools)
+│   └── quadratics/                    # Quadratics topic (7 tools)
 ├── geometry/                           # Coming soon
 └── calculus/                           # Coming soon
 ```
@@ -56,6 +56,38 @@ Graph two-variable quadratic inequalities (`y ⋚ ax² + bx + c`) and visualize 
 - Vertex and x-intercept markers with coordinates
 - Pick from five example presets
 - Export graph as SVG or PNG, magnify in popup window
+- URL parameters for sharing specific examples
+
+**Stack:** React 18, Babel standalone, SVG
+
+##### [Parabola Transformations](algebra/quadratics/parabola-transformations/)
+
+Interactive exploration of how vertex form parameters transform the parent parabola y = x².
+
+- Adjust a, h, k parameters with smooth sliders
+- Real-time visualization: parent function (dashed gray) vs. transformed (solid orange)
+- Shows both vertex form `y = a(x − h)² + k` and standard form
+- Detailed transformation effects (stretch, compression, reflection, shifts)
+- Six preset transformations for common examples
+- Reset button to return to parent function
+- Export as SVG or PNG, magnify in popup window
+- URL parameters for sharing transformations
+
+**Stack:** React 18, Babel standalone, SVG
+
+##### [Discriminant Visualizer](algebra/quadratics/discriminant-visualizer/)
+
+Explore how the discriminant (b² − 4ac) determines root count and type for quadratic equations.
+
+- Interactive sliders for coefficients a, b, c
+- Large discriminant display with real-time calculation
+- Visual interpretation: number of x-intercepts on graph
+- Detailed explanations for three cases (> 0, = 0, < 0)
+- Root values displayed when they exist
+- Five presets demonstrating different discriminant scenarios
+- Vertex marker and auto-scaled graph
+- Export as SVG or PNG, magnify in popup window
+- URL parameters for sharing examples
 
 **Stack:** React 18, Babel standalone, SVG
 

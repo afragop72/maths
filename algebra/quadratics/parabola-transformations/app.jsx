@@ -8,71 +8,66 @@ const CURVE_SAMPLES = 200;
 const SVG_FONT = '"Manrope", "Segoe UI", system-ui, sans-serif';
 const SVG_MONO = '"Space Mono", "SFMono-Regular", Consolas, monospace';
 
-const INEQ_TYPES = ["y <", "y \u2264", "y >", "y \u2265"];
-
 const PRESETS = [
-  { label: "y < x\u00b2 \u2212 4",         a: 1,  b: 0,  c: -4, ineq: "y <"      },
-  { label: "y \u2265 x\u00b2 + 2x \u2212 3", a: 1,  b: 2,  c: -3, ineq: "y \u2265" },
-  { label: "y > \u2212x\u00b2 + 4x",      a: -1, b: 4,  c: 0,  ineq: "y >"      },
-  { label: "y \u2264 2x\u00b2 \u2212 8",  a: 2,  b: 0,  c: -8, ineq: "y \u2264"  },
-  { label: "y < \u2212x\u00b2 + 6x \u2212 5", a: -1, b: 6,  c: -5, ineq: "y <"   },
+  { label: "Parent Function: y = x²", a: 1, h: 0, k: 0 },
+  { label: "Vertical Shift Up: y = x² + 3", a: 1, h: 0, k: 3 },
+  { label: "Horizontal Shift Right: y = (x − 2)²", a: 1, h: 2, k: 0 },
+  { label: "Vertical Stretch: y = 2x²", a: 2, h: 0, k: 0 },
+  { label: "Reflection + Shift: y = −(x − 1)² + 4", a: -1, h: 1, k: 4 },
+  { label: "Combined: y = 0.5(x + 2)² − 3", a: 0.5, h: -2, k: -3 },
 ];
 
 /* ─── Math Utilities ─── */
 
-function evaluateQuadratic(a, b, c, x) {
-  return a * x * x + b * x + c;
+function evaluateParabola(a, h, k, x) {
+  return a * (x - h) * (x - h) + k;
 }
 
-function getDiscriminant(a, b, c) {
-  return b * b - 4 * a * c;
+function evaluateParent(x) {
+  return x * x;
 }
 
-function getRoots(a, b, c) {
-  if (a === 0) {
-    if (b === 0) return [];
-    return [-c / b];
+function getVertex(h, k) {
+  return { x: h, y: k };
+}
+
+function toStandardForm(a, h, k) {
+  // y = a(x - h)² + k
+  // y = a(x² - 2hx + h²) + k
+  // y = ax² - 2ahx + ah² + k
+  const b = -2 * a * h;
+  const c = a * h * h + k;
+  return { a, b, c };
+}
+
+function getAutoViewRange(a, h, k) {
+  const vertex = { x: h, y: k };
+
+  // Include vertex and some range around it
+  const xRange = Math.max(Math.abs(h) + 5, 5);
+  const xMin = h - xRange;
+  const xMax = h + xRange;
+
+  // Calculate y values at bounds
+  const yAtLeft = evaluateParabola(a, h, k, xMin);
+  const yAtRight = evaluateParabola(a, h, k, xMax);
+
+  let yMin, yMax;
+  if (a > 0) {
+    // Opens up: vertex is minimum
+    yMin = Math.min(k, -3);
+    yMax = Math.max(yAtLeft, yAtRight, 10);
+  } else {
+    // Opens down: vertex is maximum
+    yMin = Math.min(yAtLeft, yAtRight, -3);
+    yMax = Math.max(k, 10);
   }
-  const disc = getDiscriminant(a, b, c);
-  if (disc < 0) return [];
-  if (Math.abs(disc) < 1e-12) return [-b / (2 * a)];
-  const sqrtDisc = Math.sqrt(disc);
-  const r1 = (-b - sqrtDisc) / (2 * a);
-  const r2 = (-b + sqrtDisc) / (2 * a);
-  return [r1, r2].sort((x, y) => x - y);
-}
 
-function getVertex(a, b, c) {
-  if (a === 0) return { x: NaN, y: NaN };
-  const x = -b / (2 * a);
-  const y = evaluateQuadratic(a, b, c, x);
-  return { x, y };
-}
-
-function getAutoViewRange(a, b, c) {
-  const roots = getRoots(a, b, c);
-  const vertex = getVertex(a, b, c);
-
-  let xVals = [vertex.x];
-  if (roots.length > 0) xVals.push(...roots);
-
-  const xMin = Math.min(...xVals, -5);
-  const xMax = Math.max(...xVals, 5);
-  const xMargin = (xMax - xMin) * 0.3;
-
-  const yAtBounds = [
-    evaluateQuadratic(a, b, c, xMin - xMargin),
-    evaluateQuadratic(a, b, c, xMax + xMargin),
-    vertex.y
-  ];
-
-  const yMin = Math.min(...yAtBounds, -5);
-  const yMax = Math.max(...yAtBounds, 5);
-  const yMargin = (yMax - yMin) * 0.2;
+  const yMargin = (yMax - yMin) * 0.1;
 
   return {
-    xMin: xMin - xMargin,
-    xMax: xMax + xMargin,
+    xMin,
+    xMax,
     yMin: yMin - yMargin,
     yMax: yMax + yMargin
   };
@@ -99,42 +94,47 @@ function fmtNumber(n) {
   return n.toFixed(3).replace(/\.?0+$/, "");
 }
 
-function fmtSigned(n) {
-  const s = fmtNumber(n);
-  if (s === "0") return "+ 0";
-  return n >= 0 ? `+ ${s}` : `− ${fmtNumber(Math.abs(n))}`;
+function formatVertexForm(a, h, k) {
+  let str = "y = ";
+
+  // Coefficient a
+  if (a === 1) str += "(x";
+  else if (a === -1) str += "−(x";
+  else str += `${fmtNumber(a)}(x`;
+
+  // Horizontal shift h
+  if (h > 0) str += ` − ${fmtNumber(h)})²`;
+  else if (h < 0) str += ` + ${fmtNumber(Math.abs(h))})²`;
+  else str += ")²";
+
+  // Vertical shift k
+  if (k > 0) str += ` + ${fmtNumber(k)}`;
+  else if (k < 0) str += ` − ${fmtNumber(Math.abs(k))}`;
+
+  return str;
 }
 
-function formatQuadratic(a, b, c) {
-  const parts = [];
-  if (a === 1) parts.push("x²");
-  else if (a === -1) parts.push("−x²");
-  else if (a !== 0) parts.push(`${fmtNumber(a)}x²`);
+function formatStandardForm(a, b, c) {
+  let str = "y = ";
 
+  // ax² term
+  if (a === 1) str += "x²";
+  else if (a === -1) str += "−x²";
+  else str += `${fmtNumber(a)}x²`;
+
+  // bx term
   if (b !== 0) {
-    if (parts.length === 0) {
-      if (b === 1) parts.push("x");
-      else if (b === -1) parts.push("−x");
-      else parts.push(`${fmtNumber(b)}x`);
-    } else {
-      if (b === 1) parts.push(" + x");
-      else if (b === -1) parts.push(" − x");
-      else if (b > 0) parts.push(` + ${fmtNumber(b)}x`);
-      else parts.push(` − ${fmtNumber(Math.abs(b))}x`);
-    }
+    if (b > 0) str += ` + ${fmtNumber(b)}x`;
+    else str += ` − ${fmtNumber(Math.abs(b))}x`;
   }
 
+  // c term
   if (c !== 0) {
-    if (parts.length === 0) {
-      parts.push(fmtNumber(c));
-    } else {
-      if (c > 0) parts.push(` + ${fmtNumber(c)}`);
-      else parts.push(` − ${fmtNumber(Math.abs(c))}`);
-    }
+    if (c > 0) str += ` + ${fmtNumber(c)}`;
+    else str += ` − ${fmtNumber(Math.abs(c))}`;
   }
 
-  if (parts.length === 0) parts.push("0");
-  return parts.join("");
+  return str;
 }
 
 /* ─── Export Utilities ─── */
@@ -241,7 +241,7 @@ function Breadcrumb() {
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
       <a href="../../">Quadratics</a>
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-      <span className="breadcrumb-current">Inequality Regions</span>
+      <span className="breadcrumb-current">Transformations</span>
     </nav>
   );
 }
@@ -264,6 +264,7 @@ function HamburgerMenu() {
             <li><a href="../quadratic-equation/">Graph Studio</a></li>
             <li><a href="../quadratic-inequality/">Inequality Solver</a></li>
             <li><a href="../quadratic-inequality-region/">Inequality Regions</a></li>
+            <li><a href="../parabola-transformations/">Transformations</a></li>
             <li><a href="../completing-the-square/">Completing the Square</a></li>
             <li><a href="../sketch-binomial-factors/">Binomial Multiplication</a></li>
           </ul>
@@ -290,10 +291,10 @@ function RelatedTools() {
           <h4>Quadratic Graph Studio</h4>
           <p>Interactive graphing with sliders and real-time analysis</p>
         </a>
-        <a className="related-card" href="../quadratic-inequality/">
+        <a className="related-card" href="../quadratic-inequality-region/">
           <div className="related-card-tag">Inequalities</div>
-          <h4>Inequality Solver</h4>
-          <p>Step-by-step solution for one-variable inequalities</p>
+          <h4>Inequality Regions</h4>
+          <p>Graph two-variable quadratic inequalities</p>
         </a>
         <a className="related-card" href="../completing-the-square/">
           <div className="related-card-tag">Algebra</div>
@@ -316,84 +317,38 @@ function HeroSection() {
   return (
     <header className="hero">
       <p className="eyebrow">Math Lab</p>
-      <h1>Quadratic Inequality Regions</h1>
+      <h1>Parabola Transformations</h1>
       <p className="subhead">
-        Graph two-variable inequalities of the form y ⋚ ax² + bx + c and visualize the solution region.
+        Explore how the parameters a, h, and k transform the parent function y = x² into y = a(x − h)² + k.
       </p>
     </header>
   );
 }
 
-function CoefInput({ label, value, onChange }) {
-  return (
-    <div className="coef-group">
-      <label>{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        step="any"
-      />
-    </div>
-  );
-}
+function GraphSvg({ a, h, k, svgRef }) {
+  const bounds = useMemo(() => getAutoViewRange(a, h, k), [a, h, k]);
+  const vertex = useMemo(() => getVertex(h, k), [h, k]);
 
-function InputPanel({ a, b, c, ineqType, onSetA, onSetB, onSetC, onSetIneqType }) {
-  const quadStr = formatQuadratic(a, b, c);
-
-  const loadPreset = (preset) => {
-    onSetA(preset.a);
-    onSetB(preset.b);
-    onSetC(preset.c);
-    onSetIneqType(preset.ineq);
-  };
-
-  return (
-    <div className="input-panel">
-      <div className="coef-row">
-        <CoefInput label="a" value={a} onChange={onSetA} />
-        <CoefInput label="b" value={b} onChange={onSetB} />
-        <CoefInput label="c" value={c} onChange={onSetC} />
-        <span className="coef-formula">{ineqType} {quadStr}</span>
-      </div>
-
-      <div className="ineq-selector">
-        {INEQ_TYPES.map((type) => (
-          <button
-            key={type}
-            className={`ineq-btn ${ineqType === type ? "active" : ""}`}
-            onClick={() => onSetIneqType(type)}
-          >
-            {type}
-          </button>
-        ))}
-      </div>
-
-      <div className="presets">
-        {PRESETS.map((p, i) => (
-          <button key={i} className="preset-btn" onClick={() => loadPreset(p)}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function GraphSvg({ a, b, c, ineqType, svgRef }) {
-  const bounds = useMemo(() => getAutoViewRange(a, b, c), [a, b, c]);
-  const vertex = useMemo(() => getVertex(a, b, c), [a, b, c]);
-  const roots = useMemo(() => getRoots(a, b, c), [a, b, c]);
-
-  const isStrict = ineqType === "y <" || ineqType === "y >";
-  const shadeAbove = ineqType === "y >" || ineqType === "y ≥";
-
-  // Build curve polyline points
-  const curvePoints = useMemo(() => {
+  // Build parent curve (y = x²) polyline points
+  const parentPoints = useMemo(() => {
     const pts = [];
     for (let i = 0; i <= CURVE_SAMPLES; i++) {
       const mx = bounds.xMin + (i / CURVE_SAMPLES) * (bounds.xMax - bounds.xMin);
-      const my = evaluateQuadratic(a, b, c, mx);
+      const my = evaluateParent(mx);
+      if (Number.isFinite(my) && my >= bounds.yMin && my <= bounds.yMax) {
+        const s = toSvg(mx, my, bounds);
+        pts.push(`${s.x.toFixed(2)},${s.y.toFixed(2)}`);
+      }
+    }
+    return pts.join(" ");
+  }, [bounds]);
+
+  // Build transformed curve polyline points
+  const transformedPoints = useMemo(() => {
+    const pts = [];
+    for (let i = 0; i <= CURVE_SAMPLES; i++) {
+      const mx = bounds.xMin + (i / CURVE_SAMPLES) * (bounds.xMax - bounds.xMin);
+      const my = evaluateParabola(a, h, k, mx);
       if (Number.isFinite(my)) {
         const s = toSvg(mx, my, bounds);
         const cy = Math.max(-50, Math.min(GRAPH_VP.h + 50, s.y));
@@ -401,38 +356,7 @@ function GraphSvg({ a, b, c, ineqType, svgRef }) {
       }
     }
     return pts.join(" ");
-  }, [a, b, c, bounds]);
-
-  // Build shaded region path
-  const shadePath = useMemo(() => {
-    const topBound = shadeAbove ? bounds.yMax : bounds.yMin;
-    const pts = [];
-
-    // Start from left edge at the bound
-    const leftX = bounds.xMin;
-    const leftY = topBound;
-    const leftSvg = toSvg(leftX, leftY, bounds);
-    pts.push(`${leftSvg.x},${leftSvg.y}`);
-
-    // Follow the bound line to the right edge
-    const rightX = bounds.xMax;
-    const rightY = topBound;
-    const rightSvg = toSvg(rightX, rightY, bounds);
-    pts.push(`${rightSvg.x},${rightSvg.y}`);
-
-    // Follow the curve back
-    for (let i = CURVE_SAMPLES; i >= 0; i--) {
-      const mx = bounds.xMin + (i / CURVE_SAMPLES) * (bounds.xMax - bounds.xMin);
-      const my = evaluateQuadratic(a, b, c, mx);
-      if (Number.isFinite(my)) {
-        const s = toSvg(mx, my, bounds);
-        const cy = Math.max(-50, Math.min(GRAPH_VP.h + 50, s.y));
-        pts.push(`${s.x.toFixed(2)},${cy.toFixed(2)}`);
-      }
-    }
-
-    return `M ${pts[0]} L ${pts.join(" L ")} Z`;
-  }, [a, b, c, ineqType, bounds, shadeAbove]);
+  }, [a, h, k, bounds]);
 
   // Grid lines
   const gridData = useMemo(() => {
@@ -479,20 +403,20 @@ function GraphSvg({ a, b, c, ineqType, svgRef }) {
     return { lines, labels };
   }, [bounds]);
 
-  const inequalityText = `${ineqType} ${formatQuadratic(a, b, c)}`;
+  const vertexFormText = formatVertexForm(a, h, k);
 
   return (
-    <svg ref={svgRef} width="100%" viewBox={`0 0 ${GRAPH_VP.w} ${GRAPH_VP.h}`} role="img" aria-label="Quadratic inequality region graph">
+    <svg ref={svgRef} width="100%" viewBox={`0 0 ${GRAPH_VP.w} ${GRAPH_VP.h}`} role="img" aria-label="Parabola transformations graph">
       <defs>
         <clipPath id="plot-area">
           <rect x={PAD} y={PAD - 10} width={GRAPH_VP.w - PAD * 2} height={GRAPH_VP.h - PAD * 2 + 20} />
         </clipPath>
       </defs>
 
-      {/* Header with inequality */}
+      {/* Header with equation */}
       <text x={GRAPH_VP.w / 2} y={28} textAnchor="middle" fontSize="16"
         fontFamily={SVG_FONT} fontWeight="600" fill="#0b0d17">
-        {inequalityText}
+        {vertexFormText}
       </text>
 
       {/* Grid */}
@@ -511,38 +435,30 @@ function GraphSvg({ a, b, c, ineqType, svgRef }) {
         ))}
       </g>
 
-      {/* Shaded solution region */}
-      <g clipPath="url(#plot-area)">
-        <path d={shadePath} fill="rgba(255,107,61,0.15)" stroke="none" />
-      </g>
+      {/* Parent function curve (y = x²) */}
+      {parentPoints && (
+        <g clipPath="url(#plot-area)">
+          <polyline
+            points={parentPoints}
+            fill="none"
+            stroke="rgba(100, 116, 139, 0.4)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeDasharray="4 4"
+          />
+        </g>
+      )}
 
-      {/* Parabola curve */}
+      {/* Transformed parabola curve */}
       <g clipPath="url(#plot-area)">
         <polyline
-          points={curvePoints}
+          points={transformedPoints}
           fill="none"
           stroke="#ff6b3d"
           strokeWidth="3"
-          strokeDasharray={isStrict ? "8 4" : "none"}
           strokeLinejoin="round"
           style={{ filter: "drop-shadow(0 2px 4px rgba(255,107,61,0.25))" }}
         />
-      </g>
-
-      {/* Root markers */}
-      <g>
-        {roots.map((r, i) => {
-          const p = toSvg(r, 0, bounds);
-          return (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="5" fill="#10b981" stroke="#fff" strokeWidth="2" />
-              <text x={p.x} y={p.y + 20} textAnchor="middle" fontSize="11"
-                fontFamily={SVG_MONO} fontWeight="700" fill="#10b981">
-                {fmtNumber(r)}
-              </text>
-            </g>
-          );
-        })}
       </g>
 
       {/* Vertex marker */}
@@ -552,10 +468,10 @@ function GraphSvg({ a, b, c, ineqType, svgRef }) {
           const labelY = a > 0 ? p.y - 14 : p.y + 20;
           return (
             <>
-              <circle cx={p.x} cy={p.y} r="5" fill="#3b82f6" stroke="#fff" strokeWidth="2" />
+              <circle cx={p.x} cy={p.y} r="6" fill="#3b82f6" stroke="#fff" strokeWidth="2.5" />
               <text x={p.x} y={labelY} textAnchor="middle" fontSize="11"
                 fontFamily={SVG_MONO} fontWeight="700" fill="#3b82f6">
-                ({fmtNumber(vertex.x)}, {fmtNumber(vertex.y)})
+                Vertex ({fmtNumber(vertex.x)}, {fmtNumber(vertex.y)})
               </text>
             </>
           );
@@ -565,63 +481,177 @@ function GraphSvg({ a, b, c, ineqType, svgRef }) {
   );
 }
 
-function InfoCard({ a, b, c, ineqType }) {
-  const vertex = useMemo(() => getVertex(a, b, c), [a, b, c]);
-  const roots = useMemo(() => getRoots(a, b, c), [a, b, c]);
-  const disc = useMemo(() => getDiscriminant(a, b, c), [a, b, c]);
-
-  const shadeDirection = (ineqType === "y >" || ineqType === "y ≥") ? "above" : "below";
-  const boundaryType = (ineqType === "y <" || ineqType === "y >") ? "dashed (not included)" : "solid (included)";
-
+function ControlPanel({ a, h, k, onSetA, onSetH, onSetK, onReset, onLoadPreset }) {
   return (
-    <div className="info-card">
-      <h3>Graph Properties</h3>
-      <div className="info-row">
-        <span className="info-label">Vertex</span>
-        <span className="info-value">({fmtNumber(vertex.x)}, {fmtNumber(vertex.y)})</span>
-      </div>
-      {roots.length > 0 && (
-        <div className="info-row">
-          <span className="info-label">X-intercepts</span>
-          <span className="info-value">{roots.map(fmtNumber).join(", ")}</span>
+    <div className="control-panel">
+      <h3>Transform Parameters</h3>
+
+      <div className="control-group">
+        <label className="control-label">
+          a = {fmtNumber(a)}
+          <span className="control-label-desc">vertical stretch/compress</span>
+        </label>
+        <div className="slider-container">
+          <input
+            type="range"
+            min="-3"
+            max="3"
+            step="0.1"
+            value={a}
+            onChange={(e) => onSetA(parseFloat(e.target.value))}
+            className="slider"
+          />
+          <span className="value-display">{fmtNumber(a)}</span>
         </div>
-      )}
-      {roots.length === 0 && (
-        <div className="info-row">
-          <span className="info-label">X-intercepts</span>
-          <span className="info-value">None (discriminant = {fmtNumber(disc)})</span>
-        </div>
-      )}
-      <div className="info-row">
-        <span className="info-label">Shaded region</span>
-        <span className="info-value">{shadeDirection} the parabola</span>
       </div>
-      <div className="info-row">
-        <span className="info-label">Boundary</span>
-        <span className="info-value">{boundaryType}</span>
+
+      <div className="control-group">
+        <label className="control-label">
+          h = {fmtNumber(h)}
+          <span className="control-label-desc">horizontal shift</span>
+        </label>
+        <div className="slider-container">
+          <input
+            type="range"
+            min="-5"
+            max="5"
+            step="0.5"
+            value={h}
+            onChange={(e) => onSetH(parseFloat(e.target.value))}
+            className="slider"
+          />
+          <span className="value-display">{fmtNumber(h)}</span>
+        </div>
+      </div>
+
+      <div className="control-group">
+        <label className="control-label">
+          k = {fmtNumber(k)}
+          <span className="control-label-desc">vertical shift</span>
+        </label>
+        <div className="slider-container">
+          <input
+            type="range"
+            min="-5"
+            max="5"
+            step="0.5"
+            value={k}
+            onChange={(e) => onSetK(parseFloat(e.target.value))}
+            className="slider"
+          />
+          <span className="value-display">{fmtNumber(k)}</span>
+        </div>
+      </div>
+
+      <button className="reset-btn" onClick={onReset}>
+        Reset to Parent Function
+      </button>
+
+      <div className="presets">
+        {PRESETS.map((preset, i) => (
+          <button key={i} className="preset-btn" onClick={() => onLoadPreset(preset)}>
+            {preset.label}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function ExportFooter({ svgRef, a, b, c, ineqType }) {
+function InfoCard({ a, h, k }) {
+  const standardForm = useMemo(() => toStandardForm(a, h, k), [a, h, k]);
+  const standardFormText = formatStandardForm(standardForm.a, standardForm.b, standardForm.c);
+
+  const getADescription = () => {
+    if (Math.abs(a) < 0.01) return "Nearly horizontal";
+    if (Math.abs(a - 1) < 0.01) return "No vertical change (parent function width)";
+    if (Math.abs(a) > 1) return `Vertical stretch by factor of ${fmtNumber(Math.abs(a))}`;
+    if (Math.abs(a) < 1) return `Vertical compression by factor of ${fmtNumber(Math.abs(a))}`;
+    return "";
+  };
+
+  const getADirection = () => {
+    if (a > 0) return "Opens upward";
+    if (a < 0) return "Opens downward (reflected over x-axis)";
+    return "";
+  };
+
+  const getHDescription = () => {
+    if (Math.abs(h) < 0.01) return "No horizontal shift";
+    if (h > 0) return `Shifted right by ${fmtNumber(h)} units`;
+    if (h < 0) return `Shifted left by ${fmtNumber(Math.abs(h))} units`;
+    return "";
+  };
+
+  const getKDescription = () => {
+    if (Math.abs(k) < 0.01) return "No vertical shift";
+    if (k > 0) return `Shifted up by ${fmtNumber(k)} units`;
+    if (k < 0) return `Shifted down by ${fmtNumber(Math.abs(k))} units`;
+    return "";
+  };
+
+  return (
+    <div className="info-card">
+      <h3>Transformation Effects</h3>
+
+      <div className="info-row">
+        <span className="info-label">Parameter a = {fmtNumber(a)}</span>
+        <span className="info-value">{getADirection()}</span>
+        <span className="info-description">{getADescription()}</span>
+      </div>
+
+      <div className="info-row">
+        <span className="info-label">Parameter h = {fmtNumber(h)}</span>
+        <span className="info-description">{getHDescription()}</span>
+      </div>
+
+      <div className="info-row">
+        <span className="info-label">Parameter k = {fmtNumber(k)}</span>
+        <span className="info-description">{getKDescription()}</span>
+      </div>
+
+      <div className="info-row">
+        <span className="info-label">Vertex</span>
+        <span className="info-value">({fmtNumber(h)}, {fmtNumber(k)})</span>
+      </div>
+
+      <div className="info-row">
+        <span className="info-label">Standard Form</span>
+        <span className="info-value">{standardFormText}</span>
+      </div>
+
+      <div className="legend">
+        <div className="legend-item">
+          <div className="legend-line parent"></div>
+          <span>Parent: y = x²</span>
+        </div>
+        <div className="legend-item">
+          <div className="legend-line transformed"></div>
+          <span>Transformed: {formatVertexForm(a, h, k)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExportFooter({ svgRef, a, h, k }) {
   const handleExportSvg = () => {
     if (svgRef.current) {
-      const filename = `quadratic-inequality-region-${Date.now()}.svg`;
+      const filename = `parabola-transformation-${Date.now()}.svg`;
       exportSvg(svgRef.current, filename, GRAPH_VP);
     }
   };
 
   const handleExportPng = () => {
     if (svgRef.current) {
-      const filename = `quadratic-inequality-region-${Date.now()}.png`;
+      const filename = `parabola-transformation-${Date.now()}.png`;
       exportPng(svgRef.current, filename, GRAPH_VP);
     }
   };
 
   const handleMagnify = () => {
     if (svgRef.current) {
-      const title = `${ineqType} ${formatQuadratic(a, b, c)}`;
+      const title = formatVertexForm(a, h, k);
       openMagnifiedGraph(svgRef.current, title);
     }
   };
@@ -648,42 +678,34 @@ function App() {
   const getInitialValue = (param, defaultVal) => {
     const urlParams = new URLSearchParams(window.location.search);
     const value = urlParams.get(param);
-    if (param === 'ineqType' && value !== null) return value;
     return value !== null ? parseFloat(value) : defaultVal;
   };
 
   const [a, setA] = useState(() => getInitialValue('a', 1));
-  const [b, setB] = useState(() => getInitialValue('b', 0));
-  const [c, setC] = useState(() => getInitialValue('c', -4));
-  const [ineqType, setIneqType] = useState(() => getInitialValue('ineqType', "y <"));
+  const [h, setH] = useState(() => getInitialValue('h', 0));
+  const [k, setK] = useState(() => getInitialValue('k', 0));
   const svgRef = useRef(null);
 
   // Update URL when parameters change
   useEffect(() => {
     const url = new URL(window.location);
     url.searchParams.set('a', a);
-    url.searchParams.set('b', b);
-    url.searchParams.set('c', c);
-    url.searchParams.set('ineqType', ineqType);
+    url.searchParams.set('h', h);
+    url.searchParams.set('k', k);
     window.history.replaceState({}, '', url);
-  }, [a, b, c, ineqType]);
+  }, [a, h, k]);
 
-  if (a === 0) {
-    return (
-      <>
-        <HamburgerMenu />
-        <div className="page">
-          <Breadcrumb />
-          <HeroSection />
-          <div className="input-panel">
-            <p style={{ color: "var(--accent)", fontWeight: 600 }}>
-              Error: Coefficient <strong>a</strong> cannot be zero. Please enter a non-zero value for <strong>a</strong>.
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const handleReset = () => {
+    setA(1);
+    setH(0);
+    setK(0);
+  };
+
+  const handleLoadPreset = (preset) => {
+    setA(preset.a);
+    setH(preset.h);
+    setK(preset.k);
+  };
 
   return (
     <>
@@ -691,19 +713,21 @@ function App() {
       <div className="page">
         <Breadcrumb />
         <HeroSection />
-        <InputPanel
-          a={a} b={b} c={c} ineqType={ineqType}
-          onSetA={setA} onSetB={setB} onSetC={setC} onSetIneqType={setIneqType}
-        />
         <div className="main-grid">
           <div className="graph-card">
             <div className="svg-container">
-              <GraphSvg a={a} b={b} c={c} ineqType={ineqType} svgRef={svgRef} />
+              <GraphSvg a={a} h={h} k={k} svgRef={svgRef} />
             </div>
           </div>
           <div className="sidebar">
-            <InfoCard a={a} b={b} c={c} ineqType={ineqType} />
-            <ExportFooter svgRef={svgRef} a={a} b={b} c={c} ineqType={ineqType} />
+            <ControlPanel
+              a={a} h={h} k={k}
+              onSetA={setA} onSetH={setH} onSetK={setK}
+              onReset={handleReset}
+              onLoadPreset={handleLoadPreset}
+            />
+            <InfoCard a={a} h={h} k={k} />
+            <ExportFooter svgRef={svgRef} a={a} h={h} k={k} />
           </div>
         </div>
         <RelatedTools />
