@@ -356,6 +356,7 @@ function HamburgerMenu() {
           <a href="../quadratic-inequality-region/" className="menu-link indent">Inequality Regions</a>
           <a href="../parabola-transformations/" className="menu-link indent">Transformations</a>
           <a href="../discriminant-visualizer/" className="menu-link indent">Discriminant</a>
+          <a href="../quadratic-properties/" className="menu-link indent">Properties</a>
           <a href="../completing-the-square/" className="menu-link indent">Completing the Square</a>
           <a href="../sketch-binomial-factors/" className="menu-link indent active">Binomial Multiplication</a>
           <a href="../quadratic-form-converter/" className="menu-link indent">Form Converter</a>

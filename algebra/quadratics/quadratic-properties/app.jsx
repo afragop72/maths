@@ -199,7 +199,7 @@ function getPropertyDefinitions(a, b, c, props) {
     {
       id: 'extremum',
       name: 'Minimum or Maximum',
-      hint: <>If the parabola opens upward (a > 0), it has a minimum at the vertex. If it opens downward (a &lt; 0), it has a maximum. The value is the y-coordinate of the vertex (k).</>,
+      hint: <>If the parabola opens upward (a &gt; 0), it has a minimum at the vertex. If it opens downward (a &lt; 0), it has a maximum. The value is the y-coordinate of the vertex (k).</>,
       value: `${props.extremumType}: ${fmtNumber(props.extremumValue)}`,
       displayValue: <>{props.extremumType}: {fmtFrac(props.extremumValue)}</>
     },
@@ -268,6 +268,56 @@ function toSvg(x, y, bounds) {
 // ─────────────────────────────────────────────────────────────
 // React Components
 // ─────────────────────────────────────────────────────────────
+
+function Breadcrumb() {
+  return (
+    <nav className="breadcrumb">
+      <a href="../../../../"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../../../">Algebra</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <a href="../../">Quadratics</a>
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      <span className="breadcrumb-current">Properties</span>
+    </nav>
+  );
+}
+
+function HamburgerMenu() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="hamburger-btn" onClick={() => setOpen(true)} aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div className={`menu-overlay ${open ? "open" : ""}`} onClick={() => setOpen(false)}></div>
+      <nav className={`menu-panel ${open ? "open" : ""}`}>
+        <h2 className="menu-header">Math Lab</h2>
+        <div className="menu-section">
+          <div className="menu-section-title">Quadratics</div>
+          <ul className="menu-links">
+            <li><a href="../quadratic-equation/">Graph Studio</a></li>
+            <li><a href="../quadratic-inequality/">Inequality Solver</a></li>
+            <li><a href="../quadratic-inequality-region/">Inequality Regions</a></li>
+            <li><a href="../parabola-transformations/">Transformations</a></li>
+            <li><a href="../discriminant-visualizer/">Discriminant</a></li>
+            <li><a href="../quadratic-properties/">Properties</a></li>
+            <li><a href="../completing-the-square/">Completing the Square</a></li>
+            <li><a href="../sketch-binomial-factors/">Binomial Multiplication</a></li>
+            <li><a href="../quadratic-form-converter/">Form Converter</a></li>
+          </ul>
+        </div>
+        <div className="menu-section">
+          <div className="menu-section-title">Navigation</div>
+          <ul className="menu-links">
+            <li><a href="../../../../">Home</a></li>
+            <li><a href="../../../">Algebra</a></li>
+          </ul>
+        </div>
+      </nav>
+    </>
+  );
+}
 
 function HeroSection() {
   return (
@@ -639,6 +689,8 @@ function App() {
 
   return (
     <div className="page">
+      <Breadcrumb />
+      <HamburgerMenu />
       <HeroSection />
 
       <InputPanel
