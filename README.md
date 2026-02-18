@@ -91,6 +91,20 @@ Explore how the discriminant (b² − 4ac) determines root count and type for qu
 
 **Stack:** React 18, Babel standalone, SVG
 
+##### [Quadratic Properties](algebra/quadratics/quadratic-properties/)
+
+Analyze key characteristics of quadratic functions with progressive hints and visual feedback.
+
+- Enter coefficients or pick from five presets
+- Seven properties: direction, axis of symmetry, vertex, min/max, domain, range, y-intercept
+- Progressive reveal: show hints or reveal answers for each property
+- Detailed hints explaining the calculation for each characteristic
+- Visual parabola graph with marked features (vertex, y-intercept, axis)
+- Progress tracker and "Reveal All" option
+- Exact fraction display throughout
+
+**Stack:** React 18, Babel standalone, SVG
+
 ##### [Completing the Square](algebra/quadratics/completing-the-square/)
 
 Convert quadratics to vertex form through a geometric area model and algebraic walkthrough.
